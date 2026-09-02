@@ -1,12 +1,30 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { apiFetch } from '../api/client';
 
-const AuthContext = createContext(null);
+export interface User {
+  id: number;
+  email: string;
+  name: string;
+  global_role: 'GLOBAL_ADMIN' | 'USER';
+  created_at?: string;
+}
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('kanban_token') || null);
-  const [loading, setLoading] = useState(true);
+export interface AuthContextType {
+  user: User | null;
+  token: string | null;
+  isAuthenticated: boolean;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<any>;
+  register: (name: string, email: string, password: string) => Promise<any>;
+  logout: () => void;
+}
+
+const AuthContext = createContext<AuthContextType | null>(null);
+
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(localStorage.getItem('kanban_token') || null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -19,7 +37,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
-        const data = await apiFetch('/auth/me');
+        const data = await apiFetch<{ user: User }>('/auth/me');
         setUser(data.user);
         setToken(storedToken);
       } catch (err) {
@@ -35,8 +53,8 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
-  const login = async (email, password) => {
-    const data = await apiFetch('/auth/login', {
+  const login = async (email: string, password: string) => {
+    const data = await apiFetch<{ token: string; user: User }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
@@ -50,8 +68,8 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
-  const register = async (name, email, password) => {
-    const data = await apiFetch('/auth/register', {
+  const register = async (name: string, email: string, password: string) => {
+    const data = await apiFetch<{ token: string; user: User }>('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ name, email, password }),
     });
@@ -88,7 +106,7 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');

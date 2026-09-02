@@ -1,9 +1,13 @@
 const BASE_URL = '/api';
 
-export const apiFetch = async (endpoint, options = {}) => {
+export interface ApiFetchOptions extends RequestInit {
+  headers?: Record<string, string>;
+}
+
+export const apiFetch = async <T = any>(endpoint: string, options: ApiFetchOptions = {}): Promise<T> => {
   const token = localStorage.getItem('kanban_token');
 
-  const headers = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers || {}),
   };
@@ -20,11 +24,11 @@ export const apiFetch = async (endpoint, options = {}) => {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    const error = new Error(data.message || 'Something went wrong');
+    const error: any = new Error(data.message || 'Something went wrong');
     error.status = response.status;
     error.data = data;
     throw error;
   }
 
-  return data;
+  return data as T;
 };
