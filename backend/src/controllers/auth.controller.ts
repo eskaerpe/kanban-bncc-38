@@ -35,8 +35,15 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
 
-    const userRole: GlobalRole =
-      global_role === 'GLOBAL_ADMIN' ? GlobalRole.GLOBAL_ADMIN : GlobalRole.USER;
+    const userCount = await prisma.user.count();
+    let userRole: GlobalRole;
+    if (userCount === 0) {
+      userRole = GlobalRole.GLOBAL_ADMIN;
+    } else if (global_role === 'GLOBAL_ADMIN') {
+      userRole = GlobalRole.GLOBAL_ADMIN;
+    } else {
+      userRole = GlobalRole.USER;
+    }
 
     const user = await prisma.user.create({
       data: {
@@ -54,8 +61,17 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       },
     });
 
+    const payload = {
+      id: user.id,
+      email: user.email,
+      global_role: user.global_role,
+    };
+
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+
     res.status(201).json({
       message: 'User registered successfully',
+      token,
       user,
     });
   } catch (error) {
@@ -98,8 +114,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       token,
       user: {
         id: user.id,
-        email: user.email,
         name: user.name,
+        email: user.email,
         global_role: user.global_role,
       },
     });
