@@ -9,7 +9,7 @@ const SALT_ROUNDS = 10;
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password, name, global_role } = req.body;
+    const { email, password, name } = req.body;
 
     if (!email || !password || !name) {
       res.status(400).json({ message: 'Email, password, and name are required' });
@@ -36,14 +36,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
 
     const userCount = await prisma.user.count();
-    let userRole: GlobalRole;
-    if (userCount === 0) {
-      userRole = GlobalRole.GLOBAL_ADMIN;
-    } else if (global_role === 'GLOBAL_ADMIN') {
-      userRole = GlobalRole.GLOBAL_ADMIN;
-    } else {
-      userRole = GlobalRole.USER;
-    }
+    const userRole: GlobalRole = userCount === 0 ? GlobalRole.GLOBAL_ADMIN : GlobalRole.USER;
 
     const user = await prisma.user.create({
       data: {

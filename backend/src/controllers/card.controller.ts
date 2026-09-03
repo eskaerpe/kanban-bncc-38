@@ -485,6 +485,16 @@ export const addAssignee = async (req: Request, res: Response): Promise<void> =>
 
     const targetUserId = Number(user_id);
     const targetUser = await prisma.user.findUnique({ where: { id: targetUserId } });
+    if (!targetUser) {
+      res.status(404).json({ message: 'Target user not found' });
+      return;
+    }
+
+    const isTargetMember = card.board.board_members.some((m) => m.user_id === targetUserId);
+    if (!isTargetMember) {
+      res.status(400).json({ message: 'Target user is not a member of this board' });
+      return;
+    }
 
     const existingAssignee = await prisma.cardAssignee.findUnique({
       where: {
