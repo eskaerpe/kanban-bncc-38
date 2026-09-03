@@ -4,7 +4,6 @@ import {
   closestCorners,
   DndContext,
   DragEndEvent,
-  DragOverEvent,
   DragOverlay,
   DragStartEvent,
   KeyboardSensor,
@@ -17,14 +16,11 @@ import {
   AlertCircle,
   Archive,
   ArrowLeft,
-  Calendar,
   Filter,
-  KanbanSquare,
   Loader2,
   Plus,
   Search,
   Shield,
-  Tag,
   Trash2,
   UserPlus,
   Users,
@@ -50,6 +46,7 @@ import {
   getBoardCards,
   moveCard,
 } from '../api/card';
+import { CardDetailModal } from '../components/CardDetailModal';
 import { CardItem } from '../components/CardItem';
 import { KanbanColumn } from '../components/KanbanColumn';
 
@@ -99,6 +96,9 @@ export default function BoardDetailPage() {
   const [allUsers, setAllUsers] = useState<UserSummary[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
+
+  // Selected Card for Detail Modal
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null);
 
   // Filter States
   const [divisionFilter, setDivisionFilter] = useState<string>('ALL'); // 'ALL' | 'MY_DIVISION' | divisionId string
@@ -231,6 +231,12 @@ export default function BoardDetailPage() {
     return map;
   }, [filteredCards]);
 
+  // Handle Card Update from Modal
+  const handleCardUpdated = (updatedCard: Card) => {
+    setSelectedCard(updatedCard);
+    setCards((prev) => prev.map((c) => (c.id === updatedCard.id ? updatedCard : c)));
+  };
+
   // Handle Drag & Drop Events
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
@@ -270,7 +276,6 @@ export default function BoardDetailPage() {
       }
     }
 
-    // Don't update if position & status didn't change
     if (draggedCard.status === targetStatus && draggedCard.position === targetIndex) {
       return;
     }
@@ -286,11 +291,9 @@ export default function BoardDetailPage() {
       });
     });
 
-    // Trigger API call
     try {
       await moveCard(activeCardId, targetStatus, targetIndex);
     } catch (err: any) {
-      // Revert state if API call failed
       setCards(previousCards);
       alert(err.message || 'Gagal memindahkan kartu.');
     }
@@ -331,7 +334,6 @@ export default function BoardDetailPage() {
         description: cardDescription.trim() || null,
       });
 
-      // Append new card and close modal
       setCards((prev) => [...prev, res.card]);
       setIsNewCardModalOpen(false);
     } catch (err: any) {
@@ -452,7 +454,6 @@ export default function BoardDetailPage() {
       {/* Top Navigation Bar */}
       <header className="sticky top-0 z-30 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          {/* Left Header info */}
           <div className="flex items-center gap-3.5">
             <Link
               to="/"
@@ -484,7 +485,6 @@ export default function BoardDetailPage() {
             </div>
           </div>
 
-          {/* Right Header Actions */}
           <div className="flex items-center gap-3">
             {canManageMembers && (
               <button
@@ -524,7 +524,6 @@ export default function BoardDetailPage() {
       {/* Top Filter Bar Section */}
       <section className="border-b border-slate-800/80 bg-slate-950/40 py-3.5 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-          {/* Division Filter Tabs & Dropdown */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-semibold text-slate-400 flex items-center gap-1.5 mr-1">
               <Filter className="h-3.5 w-3.5 text-indigo-400" />
@@ -555,7 +554,6 @@ export default function BoardDetailPage() {
               </button>
             )}
 
-            {/* Division Select Dropdown */}
             <select
               value={
                 divisionFilter !== 'ALL' && divisionFilter !== 'MY_DIVISION'
@@ -576,9 +574,7 @@ export default function BoardDetailPage() {
             </select>
           </div>
 
-          {/* Right Side: Priority Filter & Search Bar */}
           <div className="flex items-center gap-3 flex-wrap">
-            {/* Priority Filter */}
             <div className="flex items-center gap-1">
               <span className="text-xs text-slate-500 mr-1 hidden sm:inline">Priority:</span>
               {(['ALL', 'HIGH', 'MID', 'LOW'] as const).map((p) => (
@@ -596,7 +592,6 @@ export default function BoardDetailPage() {
               ))}
             </div>
 
-            {/* Search Input Filter */}
             <div className="relative flex-1 md:w-56">
               <Search className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
               <input
@@ -637,6 +632,7 @@ export default function BoardDetailPage() {
                 colorAccent={col.colorAccent}
                 badgeBg={col.badgeBg}
                 onAddCardClick={() => handleOpenNewCardModal(col.key)}
+                onCardClick={(card) => setSelectedCard(card)}
               />
             ))}
           </div>
@@ -646,6 +642,17 @@ export default function BoardDetailPage() {
           </DragOverlay>
         </DndContext>
       </main>
+
+      {/* Card Detail Modal */}
+      {selectedCard && (
+        <CardDetailModal
+          card={selectedCard}
+          boardMembers={board?.board_members || []}
+          divisions={divisions}
+          onClose={() => setSelectedCard(null)}
+          onCardUpdated={handleCardUpdated}
+        />
+      )}
 
       {/* Modal "+ Tambah Card Baru" */}
       {isNewCardModalOpen && (
