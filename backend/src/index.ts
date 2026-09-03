@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes';
 import boardRoutes from './routes/board.routes';
+import cardRoutes from './routes/card.routes';
 import lookupRoutes from './routes/lookup.routes';
 
 dotenv.config();
@@ -15,6 +16,7 @@ app.use(express.json());
 
 app.use('/api/auth', authRoutes);
 app.use('/api/boards', boardRoutes);
+app.use('/api/cards', cardRoutes);
 app.use('/api', lookupRoutes);
 
 app.get('/health', (req, res) => {

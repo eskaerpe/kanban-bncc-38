@@ -8,6 +8,7 @@ import {
   addBoardMember,
   removeBoardMember,
 } from '../controllers/board.controller';
+import { createCard, getBoardCards } from '../controllers/card.controller';
 import { authenticateJWT } from '../middlewares/auth.middleware';
 
 const router = Router();
@@ -22,5 +23,8 @@ router.delete('/:id', deleteBoard);
 
 router.post('/:id/members', addBoardMember);
 router.delete('/:id/members/:userId', removeBoardMember);
+
+router.post('/:boardId/cards', createCard);
+router.get('/:boardId/cards', getBoardCards);
 
 export default router;
