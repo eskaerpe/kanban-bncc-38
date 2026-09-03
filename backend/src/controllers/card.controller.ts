@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { BoardRole, CardPriority, CardStatus, GlobalRole } from '@prisma/client';
+import { logCardActivity } from '../lib/activity';
 
 export const createCard = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -80,6 +81,8 @@ export const createCard = async (req: Request, res: Response): Promise<void> => 
       },
     });
 
+    await logCardActivity(card.id, userId, 'CARD_CREATED', `Created card "${card.title}"`);
+
     res.status(201).json({ message: 'Card created successfully', card });
   } catch (error) {
     console.error('Create card error:', error);
@@ -133,6 +136,7 @@ export const getBoardCards = async (req: Request, res: Response): Promise<void> 
           include: {
             user: { select: { id: true, name: true, email: true } },
           },
+          orderBy: { created_at: 'desc' },
         },
         activities: {
           include: {
@@ -181,13 +185,47 @@ export const updateCard = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    const isMember = card.board.board_members.some((m) => m.user_id === userId);
+    const member = card.board.board_members.find((m) => m.user_id === userId);
+    const isMember = !!member;
     if (!isMember && globalRole !== GlobalRole.GLOBAL_ADMIN) {
       res.status(403).json({ message: 'Forbidden: You are not a member of this board' });
       return;
     }
 
-    const { title, description, priority, due_date, division_id } = req.body;
+    const { title, description, priority, due_date, division_id, status, revision_note } = req.body;
+
+    // Check status change & QC Gatekeeper rules if status is being updated via PUT
+    if (status && status !== card.status) {
+      const isBoardAdmin = member?.role === BoardRole.BOARD_ADMIN;
+      const isKoorOfCardDivision = member?.role === BoardRole.KOOR_DIVISION && member?.division_id === card.division_id;
+      const isAuthorizedQC = isBoardAdmin || isKoorOfCardDivision || globalRole === GlobalRole.GLOBAL_ADMIN;
+
+      if (card.status === CardStatus.ON_QC && (status === CardStatus.DONE || status === CardStatus.REVISION)) {
+        if (!isAuthorizedQC) {
+          res.status(403).json({ message: 'Hanya Koor Divisi atau Admin yang berhak menyetujui/merevisi QC' });
+          return;
+        }
+      }
+
+      if (status === CardStatus.REVISION) {
+        if (!revision_note || typeof revision_note !== 'string' || revision_note.trim().length < 5) {
+          res.status(400).json({ message: 'Catatan revisi wajib diisi (minimal 5 karakter)' });
+          return;
+        }
+
+        await prisma.cardRevision.create({
+          data: {
+            card_id: cardId,
+            user_id: userId,
+            note: revision_note.trim(),
+          },
+        });
+
+        await logCardActivity(cardId, userId, 'REVISION_ADDED', `Requested revision: "${revision_note.trim()}"`);
+      }
+
+      await logCardActivity(cardId, userId, 'STATUS_CHANGED', `Moved card status from ${card.status} to ${status}`);
+    }
 
     const dataToUpdate: any = {};
     if (title !== undefined) dataToUpdate.title = title.trim();
@@ -200,6 +238,9 @@ export const updateCard = async (req: Request, res: Response): Promise<void> => 
     }
     if (division_id !== undefined) {
       dataToUpdate.division_id = Number(division_id);
+    }
+    if (status !== undefined && ['TO_DO', 'ON_PROGRESS', 'ON_QC', 'REVISION', 'DONE'].includes(status)) {
+      dataToUpdate.status = status as CardStatus;
     }
 
     const updatedCard = await prisma.card.update({
@@ -217,6 +258,13 @@ export const updateCard = async (req: Request, res: Response): Promise<void> => 
           include: {
             user: { select: { id: true, name: true, email: true } },
           },
+          orderBy: { created_at: 'desc' },
+        },
+        activities: {
+          include: {
+            user: { select: { id: true, name: true, email: true } },
+          },
+          orderBy: { created_at: 'desc' },
         },
       },
     });
@@ -258,13 +306,14 @@ export const moveCard = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const isMember = card.board.board_members.some((m) => m.user_id === userId);
+    const member = card.board.board_members.find((m) => m.user_id === userId);
+    const isMember = !!member;
     if (!isMember && globalRole !== GlobalRole.GLOBAL_ADMIN) {
       res.status(403).json({ message: 'Forbidden: You are not a member of this board' });
       return;
     }
 
-    const { status, position } = req.body;
+    const { status, position, revision_note } = req.body;
 
     if (!status || !['TO_DO', 'ON_PROGRESS', 'ON_QC', 'REVISION', 'DONE'].includes(status)) {
       res.status(400).json({ message: 'Valid status is required' });
@@ -273,6 +322,40 @@ export const moveCard = async (req: Request, res: Response): Promise<void> => {
 
     const targetStatus = status as CardStatus;
     const targetPosition = typeof position === 'number' && position >= 0 ? position : 0;
+
+    // Check QC Gatekeeper rules when moving card from ON_QC to DONE or REVISION
+    if (card.status === CardStatus.ON_QC && (targetStatus === CardStatus.DONE || targetStatus === CardStatus.REVISION)) {
+      const isBoardAdmin = member?.role === BoardRole.BOARD_ADMIN;
+      const isKoorOfCardDivision = member?.role === BoardRole.KOOR_DIVISION && member?.division_id === card.division_id;
+      const isAuthorizedQC = isBoardAdmin || isKoorOfCardDivision || globalRole === GlobalRole.GLOBAL_ADMIN;
+
+      if (!isAuthorizedQC) {
+        res.status(403).json({ message: 'Hanya Koor Divisi atau Admin yang berhak menyetujui/merevisi QC' });
+        return;
+      }
+    }
+
+    // Mandatory revision note when rejecting to REVISION
+    if (targetStatus === CardStatus.REVISION) {
+      if (!revision_note || typeof revision_note !== 'string' || revision_note.trim().length < 5) {
+        res.status(400).json({ message: 'Catatan revisi wajib diisi (minimal 5 karakter)' });
+        return;
+      }
+
+      await prisma.cardRevision.create({
+        data: {
+          card_id: cardId,
+          user_id: userId,
+          note: revision_note.trim(),
+        },
+      });
+
+      await logCardActivity(cardId, userId, 'REVISION_ADDED', `Requested revision: "${revision_note.trim()}"`);
+    }
+
+    if (card.status !== targetStatus) {
+      await logCardActivity(cardId, userId, 'STATUS_CHANGED', `Moved card status from ${card.status} to ${targetStatus}`);
+    }
 
     const updatedCard = await prisma.card.update({
       where: { id: cardId },
@@ -288,7 +371,18 @@ export const moveCard = async (req: Request, res: Response): Promise<void> => {
           },
         },
         attachments: true,
-        revisions: true,
+        revisions: {
+          include: {
+            user: { select: { id: true, name: true, email: true } },
+          },
+          orderBy: { created_at: 'desc' },
+        },
+        activities: {
+          include: {
+            user: { select: { id: true, name: true, email: true } },
+          },
+          orderBy: { created_at: 'desc' },
+        },
       },
     });
 
@@ -390,6 +484,7 @@ export const addAssignee = async (req: Request, res: Response): Promise<void> =>
     }
 
     const targetUserId = Number(user_id);
+    const targetUser = await prisma.user.findUnique({ where: { id: targetUserId } });
 
     const existingAssignee = await prisma.cardAssignee.findUnique({
       where: {
@@ -407,6 +502,13 @@ export const addAssignee = async (req: Request, res: Response): Promise<void> =>
           user_id: targetUserId,
         },
       });
+
+      await logCardActivity(
+        cardId,
+        userId,
+        'ASSIGNEE_ADDED',
+        `Assigned ${targetUser?.name || 'user'} to this card`
+      );
     }
 
     const updatedCard = await prisma.card.findUnique({
@@ -417,6 +519,14 @@ export const addAssignee = async (req: Request, res: Response): Promise<void> =>
           include: {
             user: { select: { id: true, name: true, email: true } },
           },
+        },
+        attachments: true,
+        revisions: true,
+        activities: {
+          include: {
+            user: { select: { id: true, name: true, email: true } },
+          },
+          orderBy: { created_at: 'desc' },
         },
       },
     });
@@ -465,12 +575,21 @@ export const removeAssignee = async (req: Request, res: Response): Promise<void>
       return;
     }
 
+    const targetUser = await prisma.user.findUnique({ where: { id: targetUserId } });
+
     await prisma.cardAssignee.deleteMany({
       where: {
         card_id: cardId,
         user_id: targetUserId,
       },
     });
+
+    await logCardActivity(
+      cardId,
+      userId,
+      'ASSIGNEE_REMOVED',
+      `Removed ${targetUser?.name || 'user'} from this card`
+    );
 
     const updatedCard = await prisma.card.findUnique({
       where: { id: cardId },
@@ -480,6 +599,14 @@ export const removeAssignee = async (req: Request, res: Response): Promise<void>
           include: {
             user: { select: { id: true, name: true, email: true } },
           },
+        },
+        attachments: true,
+        revisions: true,
+        activities: {
+          include: {
+            user: { select: { id: true, name: true, email: true } },
+          },
+          orderBy: { created_at: 'desc' },
         },
       },
     });
