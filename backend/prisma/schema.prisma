@@ -92,6 +92,7 @@ model BoardMember {
   division Division? @relation(fields: [division_id], references: [id], onDelete: SetNull)
 
   @@unique([board_id, user_id])
+  @@index([board_id, user_id])
   @@map("board_members")
 }
 
@@ -115,6 +116,8 @@ model Card {
   revisions   CardRevision[]
   activities  CardActivity[]
 
+  @@index([board_id, status, position])
+  @@index([board_id, division_id])
   @@map("cards")
 }
 

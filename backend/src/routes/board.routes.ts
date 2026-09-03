@@ -10,21 +10,28 @@ import {
 } from '../controllers/board.controller';
 import { createCard, getBoardCards } from '../controllers/card.controller';
 import { authenticateJWT } from '../middlewares/auth.middleware';
+import { validate } from '../middlewares/validate.middleware';
+import {
+  createBoardSchema,
+  updateBoardSchema,
+  addBoardMemberSchema,
+  createCardSchema,
+} from '../schemas/validation.schemas';
 
 const router = Router();
 
 router.use(authenticateJWT);
 
-router.post('/', createBoard);
+router.post('/', validate(createBoardSchema), createBoard);
 router.get('/', getBoards);
 router.get('/:id', getBoardById);
-router.put('/:id', updateBoard);
+router.put('/:id', validate(updateBoardSchema), updateBoard);
 router.delete('/:id', deleteBoard);
 
-router.post('/:id/members', addBoardMember);
+router.post('/:id/members', validate(addBoardMemberSchema), addBoardMember);
 router.delete('/:id/members/:userId', removeBoardMember);
 
-router.post('/:boardId/cards', createCard);
+router.post('/:boardId/cards', validate(createCardSchema), createCard);
 router.get('/:boardId/cards', getBoardCards);
 
 export default router;

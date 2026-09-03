@@ -9,16 +9,22 @@ import {
 import { getCardActivities } from '../controllers/activity.controller';
 import { addAttachment } from '../controllers/attachment.controller';
 import { authenticateJWT } from '../middlewares/auth.middleware';
+import { validate } from '../middlewares/validate.middleware';
+import {
+  updateCardSchema,
+  moveCardSchema,
+  addAssigneeSchema,
+} from '../schemas/validation.schemas';
 
 const router = Router();
 
 router.use(authenticateJWT);
 
-router.put('/:id', updateCard);
-router.patch('/:id/move', moveCard);
+router.put('/:id', validate(updateCardSchema), updateCard);
+router.patch('/:id/move', validate(moveCardSchema), moveCard);
 router.delete('/:id', deleteCard);
 
-router.post('/:id/assignees', addAssignee);
+router.post('/:id/assignees', validate(addAssigneeSchema), addAssignee);
 router.delete('/:id/assignees/:userId', removeAssignee);
 
 router.post('/:id/attachments', addAttachment);

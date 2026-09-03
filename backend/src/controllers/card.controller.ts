@@ -341,49 +341,127 @@ export const moveCard = async (req: Request, res: Response): Promise<void> => {
         res.status(400).json({ message: 'Catatan revisi wajib diisi (minimal 5 karakter)' });
         return;
       }
+    }
 
-      await prisma.cardRevision.create({
+    const updatedCard = await prisma.$transaction(async (tx) => {
+      if (targetStatus === CardStatus.REVISION && revision_note) {
+        await tx.cardRevision.create({
+          data: {
+            card_id: cardId,
+            user_id: userId,
+            note: revision_note.trim(),
+          },
+        });
+
+        await tx.cardActivity.create({
+          data: {
+            card_id: cardId,
+            user_id: userId,
+            action_type: 'REVISION_ADDED',
+            description: `Requested revision: "${revision_note.trim()}"`,
+          },
+        });
+      }
+
+      if (card.status !== targetStatus) {
+        await tx.cardActivity.create({
+          data: {
+            card_id: cardId,
+            user_id: userId,
+            action_type: 'STATUS_CHANGED',
+            description: `Moved card status from ${card.status} to ${targetStatus}`,
+          },
+        });
+      }
+
+      if (card.status === targetStatus) {
+        if (targetPosition < card.position) {
+          await tx.card.updateMany({
+            where: {
+              board_id: card.board_id,
+              status: card.status,
+              position: {
+                gte: targetPosition,
+                lte: card.position - 1,
+              },
+              id: { not: cardId },
+            },
+            data: {
+              position: { increment: 1 },
+            },
+          });
+        } else if (targetPosition > card.position) {
+          await tx.card.updateMany({
+            where: {
+              board_id: card.board_id,
+              status: card.status,
+              position: {
+                gte: card.position + 1,
+                lte: targetPosition,
+              },
+              id: { not: cardId },
+            },
+            data: {
+              position: { decrement: 1 },
+            },
+          });
+        }
+      } else {
+        await tx.card.updateMany({
+          where: {
+            board_id: card.board_id,
+            status: card.status,
+            position: {
+              gt: card.position,
+            },
+          },
+          data: {
+            position: { decrement: 1 },
+          },
+        });
+
+        await tx.card.updateMany({
+          where: {
+            board_id: card.board_id,
+            status: targetStatus,
+            position: {
+              gte: targetPosition,
+            },
+          },
+          data: {
+            position: { increment: 1 },
+          },
+        });
+      }
+
+      return await tx.card.update({
+        where: { id: cardId },
         data: {
-          card_id: cardId,
-          user_id: userId,
-          note: revision_note.trim(),
+          status: targetStatus,
+          position: targetPosition,
+        },
+        include: {
+          division: true,
+          assignees: {
+            include: {
+              user: { select: { id: true, name: true, email: true } },
+            },
+          },
+          attachments: true,
+          revisions: {
+            include: {
+              user: { select: { id: true, name: true, email: true } },
+            },
+            orderBy: { created_at: 'desc' },
+          },
+          activities: {
+            include: {
+              user: { select: { id: true, name: true, email: true } },
+            },
+            orderBy: { created_at: 'desc' },
+          },
         },
       });
-
-      await logCardActivity(cardId, userId, 'REVISION_ADDED', `Requested revision: "${revision_note.trim()}"`);
-    }
-
-    if (card.status !== targetStatus) {
-      await logCardActivity(cardId, userId, 'STATUS_CHANGED', `Moved card status from ${card.status} to ${targetStatus}`);
-    }
-
-    const updatedCard = await prisma.card.update({
-      where: { id: cardId },
-      data: {
-        status: targetStatus,
-        position: targetPosition,
-      },
-      include: {
-        division: true,
-        assignees: {
-          include: {
-            user: { select: { id: true, name: true, email: true } },
-          },
-        },
-        attachments: true,
-        revisions: {
-          include: {
-            user: { select: { id: true, name: true, email: true } },
-          },
-          orderBy: { created_at: 'desc' },
-        },
-        activities: {
-          include: {
-            user: { select: { id: true, name: true, email: true } },
-          },
-          orderBy: { created_at: 'desc' },
-        },
-      },
     });
 
     res.json({ message: 'Card position updated successfully', card: updatedCard });
