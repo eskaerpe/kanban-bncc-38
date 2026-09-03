@@ -34,17 +34,17 @@ export function KanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`flex flex-col rounded-2xl border bg-slate-900/40 p-4 transition-colors duration-200 border-t-2 ${colorAccent} ${
+      className={`flex flex-col rounded-lg border bg-slate-100/70 p-3.5 transition-colors duration-200 border-t-4 ${colorAccent} ${
         isOver
-          ? 'border-indigo-500/80 bg-indigo-950/20 ring-1 ring-indigo-500/30'
-          : 'border-slate-800/90'
+          ? 'border-bncc-blue bg-blue-50/60 ring-2 ring-bncc-blue/20'
+          : 'border-slate-200'
       }`}
     >
       {/* Column Header */}
-      <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800/70">
+      <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-slate-200/80">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-bold text-white tracking-wide">{title}</h3>
-          <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${badgeBg}`}>
+          <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">{title}</h3>
+          <span className={`px-2 py-0.5 text-[11px] font-bold rounded-full ${badgeBg}`}>
             {cards.length}
           </span>
         </div>
@@ -52,7 +52,7 @@ export function KanbanColumn({
         {onAddCardClick && (
           <button
             onClick={onAddCardClick}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1 rounded text-slate-400 hover:text-bncc-blue hover:bg-slate-200/80 transition-colors"
             title="Tambah kartu di kolom ini"
           >
             <Plus className="h-4 w-4" />
@@ -62,11 +62,11 @@ export function KanbanColumn({
 
       {/* Column Cards Container */}
       <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
-        <div className="flex-1 space-y-3 min-h-[150px]">
+        <div className="flex-1 space-y-2.5 min-h-[150px]">
           {cards.length === 0 ? (
-            <div className="flex h-full min-h-[120px] flex-col items-center justify-center rounded-xl border border-dashed border-slate-800/80 bg-slate-950/30 p-4 text-center">
-              <span className="text-xs text-slate-500 font-medium">Kosong</span>
-              <span className="text-[10px] text-slate-600 mt-0.5">Tarik kartu ke sini</span>
+            <div className="flex h-full min-h-[120px] flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white/50 p-4 text-center">
+              <span className="text-xs text-slate-400 font-medium">Kosong</span>
+              <span className="text-[10px] text-slate-400 mt-0.5">Tarik kartu ke sini</span>
             </div>
           ) : (
             cards.map((card) => (

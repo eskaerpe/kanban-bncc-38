@@ -12,158 +12,211 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-export const AuthShell: React.FC<{ subtitle: string; children: React.ReactNode }> = ({ subtitle, children }) => (
-  <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 p-4">
-    <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-      <div className="absolute -top-40 -left-40 h-[28rem] w-[28rem] rounded-full bg-indigo-600/25 blur-[120px]" />
-      <div className="absolute -right-32 -bottom-48 h-[30rem] w-[30rem] rounded-full bg-violet-600/20 blur-[130px]" />
-      <div className="absolute top-1/3 left-2/3 h-72 w-72 rounded-full bg-sky-500/10 blur-[100px]" />
-    </div>
-
-    <section className="relative z-10 w-full max-w-md">
+export const AuthShell: React.FC<{ subtitle: string; children: React.ReactNode }> = ({
+  subtitle,
+  children,
+}) => (
+  <main className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+    <section className="w-full max-w-md">
+      {/* Brand Header */}
       <div className="mb-8 flex flex-col items-center gap-3 text-center">
-        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-950/60 ring-1 ring-white/10">
-          <KanbanSquare className="h-7 w-7 text-white" aria-hidden="true" />
+        <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-bncc-blue text-white shadow-sm ring-1 ring-bncc-blue/20">
+          <KanbanSquare className="h-6 w-6" aria-hidden="true" />
         </span>
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-white">
+          <h1 className="text-xl font-bold tracking-tight text-bncc-navy">
             BNCC Proker Kanban
           </h1>
-          <p className="mt-1 text-sm text-slate-400">{subtitle}</p>
+          <p className="mt-1 text-xs text-slate-500">{subtitle}</p>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-6 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-8">
+      {/* Card Container */}
+      <div className="rounded-xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
         {children}
       </div>
 
-      <p className="mt-8 text-center text-xs text-slate-500">
-        &copy; {new Date().getFullYear()} Bina Nusantara Computer Club. All rights reserved.
+      <p className="mt-8 text-center text-xs text-slate-400 font-medium">
+        BNCC Proker · Bina Nusantara Computer Club
       </p>
     </section>
   </main>
 );
 
+const inputBase =
+  'w-full rounded-lg border bg-white py-2.5 pr-4 pl-10 text-sm text-slate-900 placeholder-slate-400 outline-none transition-all duration-200 disabled:cursor-not-allowed disabled:bg-slate-100';
+
+const validState =
+  'border-slate-200 focus:border-bncc-blue focus:ring-2 focus:ring-bncc-blue/20';
+
+const errorState =
+  'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-500/20';
+
+const FieldError: React.FC<{ message?: string }> = ({ message }) =>
+  message ? (
+    <p className="mt-1 text-xs text-red-500 font-medium" role="alert">
+      {message}
+    </p>
+  ) : null;
+
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as any)?.from?.pathname || '/';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [apiError, setApiError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const validate = () => {
+    const next: { email?: string; password?: string } = {};
+    if (!email.trim()) {
+      next.email = 'Email is required.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      next.email = 'Enter a valid email address.';
+    }
+    if (!password) next.password = 'Password is required.';
+    return next;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setApiError('');
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email || !emailRegex.test(email)) {
-      setError('Please enter a valid email address.');
-      return;
-    }
-
-    if (!password) {
-      setError('Please enter your password.');
-      return;
-    }
+    const nextErrors = validate();
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
 
     setSubmitting(true);
     try {
-      await login(email, password);
+      await login(email.trim(), password);
+      const from = location.state?.from?.pathname || '/';
       navigate(from, { replace: true });
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please check your credentials.');
+      setApiError(err.message || 'Login failed. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <AuthShell subtitle="Sign in to your account">
-      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-        {error && (
-          <div
-            role="alert"
-            className="flex items-start gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3.5 text-sm text-rose-300"
-          >
-            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-400" aria-hidden="true" />
-            <span>{error}</span>
-          </div>
-        )}
+    <AuthShell subtitle="Masuk ke portal manajemen program kerja.">
+      <h2 className="text-lg font-bold text-bncc-navy">Selamat Datang</h2>
+      <p className="mt-0.5 text-xs text-slate-500">
+        Masukkan kredensial akun BNCC Anda untuk mengelola board.
+      </p>
 
-        <div>
-          <label htmlFor="email" className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-            Email Address
+      {apiError && (
+        <div
+          role="alert"
+          className="mt-4 flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700"
+        >
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" aria-hidden="true" />
+          <span>{apiError}</span>
+        </div>
+      )}
+
+      <form className="mt-5 space-y-4" onSubmit={handleSubmit} noValidate>
+        {/* Email */}
+        <div className="space-y-1">
+          <label htmlFor="email" className="text-xs font-semibold text-slate-700">
+            Email
           </label>
-          <div className="relative mt-2">
-            <Mail className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+          <div className="relative">
+            <Mail
+              className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400"
+              aria-hidden="true"
+            />
             <input
               id="email"
+              name="email"
               type="email"
-              required
+              autoComplete="email"
+              placeholder="you@bncc.net"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@bncc.net"
-              className="w-full rounded-xl border border-white/10 bg-slate-950/60 py-2.5 pr-3.5 pl-10 text-sm text-white placeholder-slate-500 shadow-inner focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+              disabled={submitting}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }));
+              }}
+              className={`${inputBase} ${errors.email ? errorState : validState}`}
             />
           </div>
+          <FieldError message={errors.email} />
         </div>
 
-        <div>
-          <label htmlFor="password" className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+        {/* Password */}
+        <div className="space-y-1">
+          <label htmlFor="password" className="text-xs font-semibold text-slate-700">
             Password
           </label>
-          <div className="relative mt-2">
-            <Lock className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+          <div className="relative">
+            <Lock
+              className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400"
+              aria-hidden="true"
+            />
             <input
               id="password"
+              name="password"
               type={showPassword ? 'text' : 'password'}
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
               placeholder="••••••••"
-              className="w-full rounded-xl border border-white/10 bg-slate-950/60 py-2.5 pr-10 pl-10 text-sm text-white placeholder-slate-500 shadow-inner focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+              value={password}
+              disabled={submitting}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (errors.password)
+                  setErrors((prev) => ({ ...prev, password: undefined }));
+              }}
+              className={`${inputBase} pr-10 ${errors.password ? errorState : validState}`}
             />
             <button
               type="button"
-              onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+              onClick={() => setShowPassword((s) => !s)}
               aria-label={showPassword ? 'Hide password' : 'Show password'}
+              className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
             >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {showPassword ? (
+                <EyeOff className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <Eye className="h-4 w-4" aria-hidden="true" />
+              )}
             </button>
           </div>
+          <FieldError message={errors.password} />
         </div>
 
         <button
           type="submit"
           disabled={submitting}
-          className="group relative flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-600/30 ring-1 ring-white/10 hover:from-indigo-400 hover:to-violet-500 disabled:opacity-60"
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-bncc-blue hover:bg-bncc-blue-dark py-2.5 text-xs font-bold text-white shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-bncc-blue/40 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {submitting ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Signing in...</span>
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              Memproses...
             </>
           ) : (
             <>
-              <span>Sign In</span>
-              <LogIn className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              <LogIn className="h-4 w-4" aria-hidden="true" />
+              Masuk
             </>
           )}
         </button>
-
-        <p className="pt-2 text-center text-sm text-slate-400">
-          Don't have an account?{' '}
-          <Link to="/register" className="font-semibold text-indigo-400 hover:text-indigo-300">
-            Create account
-          </Link>
-        </p>
       </form>
+
+      <p className="mt-6 text-center text-xs text-slate-500 font-medium">
+        Belum memiliki akun?{' '}
+        <Link
+          to="/register"
+          className="font-bold text-bncc-blue hover:text-bncc-blue-dark transition-colors"
+        >
+          Daftar Sekarang
+        </Link>
+      </p>
     </AuthShell>
   );
 }

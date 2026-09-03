@@ -50,37 +50,37 @@ import { CardDetailModal } from '../components/CardDetailModal';
 import { CardItem } from '../components/CardItem';
 import { KanbanColumn } from '../components/KanbanColumn';
 
-// Standard 5 Kanban Columns configuration
+// Standard 5 Kanban Columns configuration with BNCC color coding
 const COLUMNS: { key: CardStatus; title: string; colorAccent: string; badgeBg: string }[] = [
   {
     key: 'TO_DO',
     title: 'TO DO',
-    colorAccent: 'border-t-indigo-500',
-    badgeBg: 'bg-indigo-500/15 text-indigo-300 border border-indigo-500/30',
+    colorAccent: 'border-t-bncc-navy',
+    badgeBg: 'bg-slate-100 text-bncc-navy border border-slate-200',
   },
   {
     key: 'ON_PROGRESS',
     title: 'On Progress',
-    colorAccent: 'border-t-sky-500',
-    badgeBg: 'bg-sky-500/15 text-sky-300 border border-sky-500/30',
+    colorAccent: 'border-t-bncc-cyan',
+    badgeBg: 'bg-cyan-50 text-cyan-700 border border-cyan-200',
   },
   {
     key: 'ON_QC',
     title: 'On QC',
-    colorAccent: 'border-t-amber-500',
-    badgeBg: 'bg-amber-500/15 text-amber-300 border border-amber-500/30',
+    colorAccent: 'border-t-purple-600',
+    badgeBg: 'bg-purple-50 text-purple-700 border border-purple-200',
   },
   {
     key: 'REVISION',
     title: 'Revision',
-    colorAccent: 'border-t-rose-500',
-    badgeBg: 'bg-rose-500/15 text-rose-300 border border-rose-500/30',
+    colorAccent: 'border-t-amber-500',
+    badgeBg: 'bg-amber-50 text-amber-700 border border-amber-200',
   },
   {
     key: 'DONE',
     title: 'Done',
     colorAccent: 'border-t-emerald-500',
-    badgeBg: 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30',
+    badgeBg: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
   },
 ];
 
@@ -101,8 +101,8 @@ export default function BoardDetailPage() {
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
 
   // Filter States
-  const [divisionFilter, setDivisionFilter] = useState<string>('ALL'); // 'ALL' | 'MY_DIVISION' | divisionId string
-  const [priorityFilter, setPriorityFilter] = useState<string>('ALL'); // 'ALL' | 'HIGH' | 'MID' | 'LOW'
+  const [divisionFilter, setDivisionFilter] = useState<string>('ALL');
+  const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Drag and Drop active item
@@ -169,7 +169,7 @@ export default function BoardDetailPage() {
     loadData();
   }, [boardId]);
 
-  // Current user's division in this board (for "Divisi Saya" filter)
+  // Current user's division in this board
   const myMemberInfo = useMemo(() => {
     return board?.board_members?.find((m) => m.user_id === user?.id);
   }, [board, user]);
@@ -179,7 +179,6 @@ export default function BoardDetailPage() {
   // Filtered Cards calculation
   const filteredCards = useMemo(() => {
     return cards.filter((c) => {
-      // 1. Division Filter
       if (divisionFilter === 'MY_DIVISION') {
         if (!myDivisionId) return false;
         if (c.division_id !== myDivisionId) return false;
@@ -188,12 +187,10 @@ export default function BoardDetailPage() {
         if (c.division_id !== targetDivId) return false;
       }
 
-      // 2. Priority Filter
       if (priorityFilter !== 'ALL' && c.priority !== priorityFilter) {
         return false;
       }
 
-      // 3. Search Title Filter
       if (searchQuery.trim() !== '') {
         const query = searchQuery.toLowerCase();
         const matchesTitle = c.title.toLowerCase().includes(query);
@@ -223,7 +220,6 @@ export default function BoardDetailPage() {
       }
     });
 
-    // Sort cards within each column by position
     Object.keys(map).forEach((key) => {
       map[key as CardStatus].sort((a, b) => a.position - b.position);
     });
@@ -261,7 +257,6 @@ export default function BoardDetailPage() {
     let targetStatus: CardStatus = draggedCard.status;
     let targetIndex = 0;
 
-    // Check if dropped over a column container or another card
     const overData = over.data.current;
     if (overData?.type === 'Column') {
       targetStatus = overData.status;
@@ -423,23 +418,23 @@ export default function BoardDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400 gap-3">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
-        <span>Memuat Board Kanban...</span>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-500 gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-bncc-blue" />
+        <span className="font-semibold text-xs">Memuat Board Kanban...</span>
       </div>
     );
   }
 
   if (error || !board) {
     return (
-      <div className="min-h-screen bg-slate-950 p-6 flex flex-col items-center justify-center text-center">
-        <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 max-w-md">
-          <AlertCircle className="h-10 w-10 text-red-400 mx-auto mb-3" />
-          <h2 className="text-lg font-bold text-white mb-2">Terjadi Kesalahan</h2>
-          <p className="text-sm text-red-300 mb-4">{error || 'Board tidak ditemukan.'}</p>
+      <div className="min-h-screen bg-slate-50 p-6 flex flex-col items-center justify-center text-center">
+        <div className="rounded-xl border border-red-200 bg-white p-6 max-w-md shadow-sm">
+          <AlertCircle className="h-10 w-10 text-red-500 mx-auto mb-3" />
+          <h2 className="text-base font-bold text-slate-900 mb-1">Terjadi Kesalahan</h2>
+          <p className="text-xs text-red-600 mb-4">{error || 'Board tidak ditemukan.'}</p>
           <Link
             to="/"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-white hover:bg-slate-700 text-sm font-medium transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-bncc-blue text-white hover:bg-bncc-blue-dark text-xs font-bold transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             Kembali ke Dashboard
@@ -450,47 +445,47 @@ export default function BoardDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-30 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
             <Link
               to="/"
-              className="flex items-center justify-center h-9 w-9 rounded-xl border border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white hover:border-slate-700 transition-colors"
+              className="flex items-center justify-center h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-600 hover:text-bncc-blue hover:bg-slate-50 transition-colors"
               title="Kembali ke Dashboard"
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <div>
               <div className="flex items-center gap-2.5">
-                <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight">
+                <h1 className="text-lg font-extrabold text-bncc-navy tracking-tight">
                   {board.title}
                 </h1>
                 {board.status === 'ACTIVE' ? (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     ACTIVE
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
                     <Archive className="h-3 w-3" />
                     ARCHIVED
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">
+              <p className="text-xs text-slate-500 line-clamp-1">
                 {board.description || 'Tidak ada deskripsi.'}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             {canManageMembers && (
               <button
                 onClick={handleToggleStatus}
                 disabled={isUpdatingStatus}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-xs font-medium text-slate-300 transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors disabled:opacity-50"
                 title="Ubah status proker"
               >
                 {isUpdatingStatus ? (
@@ -504,15 +499,15 @@ export default function BoardDetailPage() {
 
             <button
               onClick={handleOpenMemberModal}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-slate-800 bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white font-medium text-xs transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition-all shadow-sm"
             >
-              <Users className="h-3.5 w-3.5 text-indigo-400" />
+              <Users className="h-3.5 w-3.5 text-bncc-blue" />
               <span>Kelola Anggota ({board.board_members?.length || 0})</span>
             </button>
 
             <button
               onClick={() => handleOpenNewCardModal('TO_DO')}
-              className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-400 hover:to-violet-500 text-white font-medium text-xs shadow-md shadow-indigo-950/50 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-bncc-blue hover:bg-bncc-blue-dark text-white font-bold text-xs shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-bncc-blue/30"
             >
               <Plus className="h-3.5 w-3.5" />
               <span>+ Tambah Card Baru</span>
@@ -522,20 +517,20 @@ export default function BoardDetailPage() {
       </header>
 
       {/* Top Filter Bar Section */}
-      <section className="border-b border-slate-800/80 bg-slate-950/40 py-3.5 px-4 sm:px-6 lg:px-8">
+      <section className="border-b border-slate-200 bg-white py-3 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-semibold text-slate-400 flex items-center gap-1.5 mr-1">
-              <Filter className="h-3.5 w-3.5 text-indigo-400" />
+            <span className="text-xs font-bold text-slate-500 flex items-center gap-1.5 mr-1">
+              <Filter className="h-3.5 w-3.5 text-bncc-blue" />
               Divisi:
             </span>
 
             <button
               onClick={() => setDivisionFilter('ALL')}
-              className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
                 divisionFilter === 'ALL'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  ? 'bg-bncc-blue text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
               }`}
             >
               Semua Divisi
@@ -544,10 +539,10 @@ export default function BoardDetailPage() {
             {myDivisionId && (
               <button
                 onClick={() => setDivisionFilter('MY_DIVISION')}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
                   divisionFilter === 'MY_DIVISION'
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                    ? 'bg-bncc-blue text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
                 }`}
               >
                 Divisi Saya ({myMemberInfo?.division?.name || 'Divisi'})
@@ -563,7 +558,7 @@ export default function BoardDetailPage() {
               onChange={(e) => {
                 if (e.target.value) setDivisionFilter(e.target.value);
               }}
-              className="rounded-lg border border-slate-800 bg-slate-900 px-3 py-1 text-xs text-slate-300 outline-none focus:border-indigo-500"
+              className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 outline-none focus:border-bncc-blue"
             >
               <option value="">-- Pilih Divisi --</option>
               {divisions.map((d) => (
@@ -576,15 +571,15 @@ export default function BoardDetailPage() {
 
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-1">
-              <span className="text-xs text-slate-500 mr-1 hidden sm:inline">Priority:</span>
+              <span className="text-xs text-slate-500 font-semibold mr-1 hidden sm:inline">Priority:</span>
               {(['ALL', 'HIGH', 'MID', 'LOW'] as const).map((p) => (
                 <button
                   key={p}
                   onClick={() => setPriorityFilter(p)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
                     priorityFilter === p
-                      ? 'bg-slate-800 text-white border border-slate-700'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                      ? 'bg-bncc-navy text-white'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
                 >
                   {p}
@@ -593,18 +588,18 @@ export default function BoardDetailPage() {
             </div>
 
             <div className="relative flex-1 md:w-56">
-              <Search className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
+              <Search className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 placeholder="Cari kartu..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-xl border border-slate-800 bg-slate-900/80 py-1.5 pl-9 pr-3 text-xs text-white placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                className="w-full rounded-lg border border-slate-200 bg-white py-1.5 pl-9 pr-3 text-xs text-slate-900 placeholder-slate-400 outline-none focus:border-bncc-blue focus:ring-2 focus:ring-bncc-blue/20"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute top-1/2 right-2.5 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                  className="absolute top-1/2 right-2.5 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -656,35 +651,35 @@ export default function BoardDetailPage() {
 
       {/* Modal "+ Tambah Card Baru" */}
       {isNewCardModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-6 shadow-xl">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-200">
               <div className="flex items-center gap-2.5">
-                <span className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
+                <span className="p-2 rounded-lg bg-blue-50 text-bncc-blue">
                   <Plus className="h-5 w-5" />
                 </span>
-                <h2 className="text-lg font-bold text-white">Tambah Card Baru</h2>
+                <h2 className="text-base font-bold text-bncc-navy">Tambah Card Baru</h2>
               </div>
               <button
                 onClick={() => setIsNewCardModalOpen(false)}
                 disabled={isCreatingCard}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             {newCardError && (
-              <div className="mt-4 flex items-center gap-2.5 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">
-                <AlertCircle className="h-4 w-4 shrink-0" />
+              <div className="mt-4 flex items-center gap-2.5 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
                 <span>{newCardError}</span>
               </div>
             )}
 
             <form onSubmit={handleCreateCardSubmit} className="mt-4 space-y-4">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-                  Judul Card <span className="text-red-400">*</span>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Judul Card <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -692,14 +687,14 @@ export default function BoardDetailPage() {
                   value={cardTitle}
                   disabled={isCreatingCard}
                   onChange={(e) => setCardTitle(e.target.value)}
-                  className="w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/25"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 outline-none focus:border-bncc-blue focus:ring-2 focus:ring-bncc-blue/20"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-                    Divisi Penanggung Jawab <span className="text-red-400">*</span>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Divisi Penanggung Jawab <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={cardDivisionId}
@@ -707,7 +702,7 @@ export default function BoardDetailPage() {
                     onChange={(e) =>
                       setCardDivisionId(e.target.value ? Number(e.target.value) : '')
                     }
-                    className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-bncc-blue"
                   >
                     <option value="">-- Pilih Divisi --</option>
                     {divisions.map((d) => (
@@ -719,14 +714,14 @@ export default function BoardDetailPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
                     Prioritas
                   </label>
                   <select
                     value={cardPriority}
                     disabled={isCreatingCard}
                     onChange={(e) => setCardPriority(e.target.value as CardPriority)}
-                    className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-bncc-blue"
                   >
                     <option value="LOW">LOW</option>
                     <option value="MID">MID</option>
@@ -736,7 +731,7 @@ export default function BoardDetailPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                <label className="block text-xs font-bold text-slate-700 mb-1">
                   Tenggat Waktu (Due Date)
                 </label>
                 <input
@@ -744,12 +739,12 @@ export default function BoardDetailPage() {
                   value={cardDueDate}
                   disabled={isCreatingCard}
                   onChange={(e) => setCardDueDate(e.target.value)}
-                  className="w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-900 outline-none focus:border-bncc-blue"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                <label className="block text-xs font-bold text-slate-700 mb-1">
                   Deskripsi Card
                 </label>
                 <textarea
@@ -758,23 +753,23 @@ export default function BoardDetailPage() {
                   value={cardDescription}
                   disabled={isCreatingCard}
                   onChange={(e) => setCardDescription(e.target.value)}
-                  className="w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/25"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 outline-none focus:border-bncc-blue focus:ring-2 focus:ring-bncc-blue/20"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setIsNewCardModalOpen(false)}
                   disabled={isCreatingCard}
-                  className="px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-white transition-colors"
+                  className="px-4 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={isCreatingCard}
-                  className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-400 hover:to-violet-500 text-white font-medium text-sm shadow-md shadow-indigo-950/50 transition-all disabled:opacity-60"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-bncc-blue hover:bg-bncc-blue-dark text-white font-bold text-xs shadow-sm transition-all disabled:opacity-60"
                 >
                   {isCreatingCard ? (
                     <>
@@ -796,36 +791,36 @@ export default function BoardDetailPage() {
 
       {/* Modal "Kelola Anggota Board" */}
       {isMemberModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-2xl rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-2xl rounded-xl border border-slate-200 bg-white p-6 shadow-xl flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-200">
               <div className="flex items-center gap-2.5">
-                <span className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
+                <span className="p-2 rounded-lg bg-blue-50 text-bncc-blue">
                   <Users className="h-5 w-5" />
                 </span>
                 <div>
-                  <h2 className="text-lg font-bold text-white">Kelola Anggota Board</h2>
-                  <p className="text-xs text-slate-400">{board.title}</p>
+                  <h2 className="text-base font-bold text-bncc-navy">Kelola Anggota Board</h2>
+                  <p className="text-xs text-slate-500">{board.title}</p>
                 </div>
               </div>
               <button
                 onClick={() => setIsMemberModalOpen(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             {memberActionError && (
-              <div className="mt-4 flex items-center gap-2.5 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">
-                <AlertCircle className="h-4 w-4 shrink-0" />
+              <div className="mt-4 flex items-center gap-2.5 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
                 <span>{memberActionError}</span>
               </div>
             )}
 
             <div className="overflow-y-auto space-y-6 my-4 pr-1">
-              <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-400 mb-3 flex items-center gap-2">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-bncc-blue mb-3 flex items-center gap-2">
                   <UserPlus className="h-4 w-4" />
                   Tambah Anggota Baru
                 </h3>
@@ -833,8 +828,8 @@ export default function BoardDetailPage() {
                 <form onSubmit={handleAddMemberSubmit} className="space-y-3">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="sm:col-span-1">
-                      <label className="block text-[11px] font-semibold text-slate-400 mb-1">
-                        Pilih Pengguna <span className="text-red-400">*</span>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        Pilih Pengguna <span className="text-red-500">*</span>
                       </label>
                       <select
                         value={selectedUserId}
@@ -842,7 +837,7 @@ export default function BoardDetailPage() {
                         onChange={(e) =>
                           setSelectedUserId(e.target.value ? Number(e.target.value) : '')
                         }
-                        className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-white outline-none focus:border-indigo-500"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-bncc-blue"
                       >
                         <option value="">-- Pilih User --</option>
                         {availableUsersToAdd.map((u) => (
@@ -854,14 +849,14 @@ export default function BoardDetailPage() {
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-400 mb-1">
-                        Role Board <span className="text-red-400">*</span>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        Role Board <span className="text-red-500">*</span>
                       </label>
                       <select
                         value={selectedRole}
                         disabled={isAddingMember}
                         onChange={(e) => setSelectedRole(e.target.value as any)}
-                        className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-white outline-none focus:border-indigo-500"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-bncc-blue"
                       >
                         <option value="STAFF">STAFF</option>
                         <option value="KOOR_DIVISION">KOOR_DIVISION</option>
@@ -870,7 +865,7 @@ export default function BoardDetailPage() {
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
                         Divisi
                       </label>
                       <select
@@ -881,7 +876,7 @@ export default function BoardDetailPage() {
                             e.target.value ? Number(e.target.value) : ''
                           )
                         }
-                        className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-white outline-none focus:border-indigo-500"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-bncc-blue"
                       >
                         <option value="">-- Tanpa Divisi --</option>
                         {divisions.map((d) => (
@@ -897,7 +892,7 @@ export default function BoardDetailPage() {
                     <button
                       type="submit"
                       disabled={isAddingMember}
-                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-colors disabled:opacity-60"
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-bncc-blue hover:bg-bncc-blue-dark text-white text-xs font-bold transition-colors disabled:opacity-60"
                     >
                       {isAddingMember ? (
                         <>
@@ -916,12 +911,12 @@ export default function BoardDetailPage() {
               </div>
 
               <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
                   Daftar Anggota ({board.board_members?.length || 0})
                 </h3>
 
                 {!board.board_members || board.board_members.length === 0 ? (
-                  <p className="text-xs text-slate-500 italic py-4 text-center">
+                  <p className="text-xs text-slate-400 italic py-4 text-center">
                     Belum ada anggota di board ini.
                   </p>
                 ) : (
@@ -931,31 +926,31 @@ export default function BoardDetailPage() {
                       return (
                         <div
                           key={m.id}
-                          className="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-800/80 bg-slate-950/40 hover:border-slate-700 transition-colors"
+                          className="flex items-center justify-between gap-3 p-3 rounded-lg border border-slate-200 bg-white hover:border-slate-300 transition-colors"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="h-9 w-9 rounded-full bg-slate-800 flex items-center justify-center font-bold text-xs text-indigo-300 border border-indigo-500/20">
+                            <div className="h-8 w-8 rounded-full bg-bncc-navy flex items-center justify-center font-bold text-xs text-white">
                               {m.user?.name ? m.user.name.charAt(0).toUpperCase() : 'U'}
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold text-white">
+                                <span className="text-xs font-bold text-slate-900">
                                   {m.user?.name || 'User'}
                                 </span>
                                 {isSelf && (
-                                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200 font-semibold">
                                     Anda
                                   </span>
                                 )}
                               </div>
-                              <span className="text-xs text-slate-400 block">
+                              <span className="text-[11px] text-slate-500 block">
                                 {m.user?.email}
                               </span>
                             </div>
                           </div>
 
                           <div className="flex items-center gap-3">
-                            <span className="hidden sm:inline-block text-xs px-2.5 py-1 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/80 font-medium">
+                            <span className="hidden sm:inline-block text-xs px-2.5 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200 font-semibold">
                               {m.division?.name || 'Tanpa Divisi'}
                             </span>
                             <RoleBadge role={m.role} />
@@ -963,11 +958,11 @@ export default function BoardDetailPage() {
                               <button
                                 onClick={() => handleRemoveMember(m.user_id)}
                                 disabled={removingUserId === m.user_id}
-                                className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                                className="p-1.5 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
                                 title="Hapus dari board"
                               >
                                 {removingUserId === m.user_id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin text-red-400" />
+                                  <Loader2 className="h-4 w-4 animate-spin text-red-500" />
                                 ) : (
                                   <Trash2 className="h-4 w-4" />
                                 )}
@@ -982,11 +977,11 @@ export default function BoardDetailPage() {
               </div>
             </div>
 
-            <div className="flex justify-end pt-4 border-t border-slate-800">
+            <div className="flex justify-end pt-4 border-t border-slate-200">
               <button
                 type="button"
                 onClick={() => setIsMemberModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800 transition-colors"
+                className="px-4 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors"
               >
                 Selesai
               </button>
@@ -1002,21 +997,21 @@ function RoleBadge({ role }: { role: string }) {
   switch (role) {
     case 'BOARD_ADMIN':
       return (
-        <span className="text-xs px-2.5 py-1 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-semibold flex items-center gap-1">
+        <span className="text-xs px-2.5 py-1 rounded bg-bncc-blue/10 text-bncc-blue border border-bncc-blue/20 font-bold flex items-center gap-1">
           <Shield className="h-3 w-3" />
           BOARD_ADMIN
         </span>
       );
     case 'KOOR_DIVISION':
       return (
-        <span className="text-xs px-2.5 py-1 rounded-md bg-sky-500/20 text-sky-300 border border-sky-500/30 font-semibold">
+        <span className="text-xs px-2.5 py-1 rounded bg-cyan-50 text-cyan-700 border border-cyan-200 font-bold">
           KOOR_DIVISION
         </span>
       );
     case 'STAFF':
     default:
       return (
-        <span className="text-xs px-2.5 py-1 rounded-md bg-slate-800 text-slate-400 border border-slate-700 font-medium">
+        <span className="text-xs px-2.5 py-1 rounded bg-slate-100 text-slate-600 border border-slate-200 font-semibold">
           STAFF
         </span>
       );

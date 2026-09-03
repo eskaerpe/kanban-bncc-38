@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { AlertCircle, Calendar, Clock, Tag } from 'lucide-react';
+import { AlertCircle, Calendar, Tag } from 'lucide-react';
 import { Card, CardPriority } from '../api/card';
 
 interface CardItemProps {
@@ -33,7 +33,6 @@ export function CardItem({ card, onClick }: CardItemProps) {
     if (!card.due_date || card.status === 'DONE') return false;
     const due = new Date(card.due_date);
     const today = new Date();
-    // Compare dates (ignore exact time)
     due.setHours(23, 59, 59, 999);
     return due.getTime() < today.getTime();
   }, [card.due_date, card.status]);
@@ -54,12 +53,12 @@ export function CardItem({ card, onClick }: CardItemProps) {
   // Color generator for assignee avatar fallback
   const getAvatarBg = (name: string) => {
     const bgColors = [
-      'bg-indigo-600 border-indigo-400',
-      'bg-violet-600 border-violet-400',
-      'bg-sky-600 border-sky-400',
-      'bg-emerald-600 border-emerald-400',
-      'bg-amber-600 border-amber-400',
-      'bg-rose-600 border-rose-400',
+      'bg-bncc-blue text-white',
+      'bg-bncc-navy text-white',
+      'bg-slate-700 text-white',
+      'bg-emerald-600 text-white',
+      'bg-amber-600 text-white',
+      'bg-purple-600 text-white',
     ];
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
@@ -76,17 +75,17 @@ export function CardItem({ card, onClick }: CardItemProps) {
       {...attributes}
       {...listeners}
       onClick={onClick}
-      className={`group relative flex flex-col gap-3 rounded-xl border border-slate-800/90 bg-slate-900/80 p-4 transition-all duration-200 hover:border-slate-700 hover:bg-slate-900 shadow-md ${
+      className={`group relative flex flex-col gap-2.5 rounded-lg border border-slate-200 bg-white p-3.5 transition-all duration-200 hover:border-bncc-blue hover:shadow-md ${
         isDragging
-          ? 'ring-2 ring-indigo-500 shadow-2xl z-50 cursor-grabbing'
+          ? 'ring-2 ring-bncc-blue shadow-xl z-50 cursor-grabbing'
           : 'cursor-grab active:cursor-grabbing'
       }`}
     >
       {/* Top Badges Row: Division Tag & Priority */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         {/* Division Tag Badge */}
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-indigo-950/80 text-indigo-300 border border-indigo-800/50">
-          <Tag className="h-3 w-3 text-indigo-400" />
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+          <Tag className="h-3 w-3 text-bncc-blue" />
           <span className="line-clamp-1">{card.division?.name || 'Tanpa Divisi'}</span>
         </span>
 
@@ -95,40 +94,40 @@ export function CardItem({ card, onClick }: CardItemProps) {
       </div>
 
       {/* Card Title */}
-      <h4 className="text-sm font-semibold text-white group-hover:text-indigo-200 transition-colors leading-snug">
+      <h4 className="text-xs font-bold text-slate-900 group-hover:text-bncc-blue transition-colors leading-snug">
         {card.title}
       </h4>
 
       {/* Description Snippet (Optional) */}
       {card.description && (
-        <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+        <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
           {card.description}
         </p>
       )}
 
       {/* Bottom Meta Row: Due Date & Assignees */}
-      <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-800/70 mt-1">
+      <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 mt-0.5">
         {/* Due Date or Overdue Badge */}
         {card.due_date ? (
           isOverdue ? (
             <span
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-rose-500/15 text-rose-400 border border-rose-500/30 animate-pulse"
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-50 text-red-600 border border-red-200"
               title={`Jatuh tempo pada ${card.due_date}`}
             >
-              <AlertCircle className="h-3 w-3" />
+              <AlertCircle className="h-3 w-3 text-red-500" />
               <span>Terlambat: {formattedDueDate}</span>
             </span>
           ) : (
             <span
-              className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400"
+              className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500"
               title={`Jatuh tempo: ${card.due_date}`}
             >
-              <Calendar className="h-3 w-3 text-slate-500" />
+              <Calendar className="h-3 w-3 text-slate-400" />
               <span>{formattedDueDate}</span>
             </span>
           )
         ) : (
-          <span className="text-[11px] text-slate-600 italic">Tanpa tenggat</span>
+          <span className="text-[11px] text-slate-400 italic">Tanpa tenggat</span>
         )}
 
         {/* Multi-Assignee Avatars */}
@@ -141,7 +140,7 @@ export function CardItem({ card, onClick }: CardItemProps) {
                 <div
                   key={a.id}
                   title={name}
-                  className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold text-white ring-2 ring-slate-900 border ${getAvatarBg(
+                  className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold ring-2 ring-white border border-slate-200 ${getAvatarBg(
                     name
                   )}`}
                 >
@@ -151,7 +150,7 @@ export function CardItem({ card, onClick }: CardItemProps) {
             })}
           </div>
         ) : (
-          <span className="text-[11px] text-slate-600">Unassigned</span>
+          <span className="text-[11px] text-slate-400">Unassigned</span>
         )}
       </div>
     </div>
@@ -163,23 +162,23 @@ function PriorityBadge({ priority }: { priority: CardPriority }) {
   switch (priority) {
     case 'HIGH':
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30">
-          <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-50 text-red-600 border border-red-200">
+          <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
           HIGH
         </span>
       );
     case 'MID':
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
-          <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
           MID
         </span>
       );
     case 'LOW':
     default:
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/15 text-sky-400 border border-sky-500/30">
-          <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+          <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
           LOW
         </span>
       );
