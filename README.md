@@ -51,48 +51,47 @@ kanban-bncc/
 
 ---
 
-## 💻 Local Development Setup
+## 💻 Local Development Setup (XAMPP MySQL & Node.js)
 
-### 1. Environment Configuration
+### Langkah 1: Persiapan Database XAMPP MySQL
+1. Buka **XAMPP Control Panel** di Windows dan jalankan service **MySQL** (dan Apache jika menggunakan phpMyAdmin).
+2. Buat database baru bernama `kanban_bncc` melalui phpMyAdmin (`http://localhost/phpmyadmin`) atau MySQL CLI.
 
-Copy environment templates to setup `.env` files:
+### Langkah 2: Konfigurasi Environment File
+1. Di direktori `backend/`, buat/perbarui file `.env`:
+   ```env
+   DATABASE_URL="mysql://root:@localhost:3306/kanban_bncc"
+   PORT=5000
+   JWT_SECRET="kanban...2026"
+   CORS_ORIGIN="http://localhost:5173"
+   ```
 
+2. Di direktori `frontend/`, buat/perbarui file `.env`:
+   ```env
+   VITE_API_BASE_URL="http://localhost:5000/api"
+   ```
+
+### Langkah 3: Database Migration & Seeding (Prisma)
+Jalankan perintah berikut di folder `backend/`:
 ```bash
-# Root environment (optional for shared references)
-cp .env.example .env
-
-# Backend environment
-cp backend/.env.example backend/.env
-
-# Frontend environment
-cp frontend/.env.example frontend/.env
-```
-
-### 2. Backend Setup
-
-```bash
-# Install dependencies
-npm --prefix backend install
-
-# Run database migrations & seed initial data
 cd backend
-npx prisma migrate dev
+npm install
+npx prisma migrate dev --name init
 npx prisma db seed
-cd ..
-
-# Start backend development server (default port 5000)
-npm --prefix backend run dev
 ```
+*(Perintah ini akan membuat struktur tabel di MySQL XAMPP dan mengisi data divisi standar BNCC serta akun seed default).*
 
-### 3. Frontend Setup
+### Langkah 4: Jalankan Server Backend & Frontend
+**Option A (Terminal Terpisah):**
+- **Terminal 1 (`backend/`)**: `npm run dev` (Berjalan di `http://localhost:5000`)
+- **Terminal 2 (`frontend/`)**: `npm install` lalu `npm run dev` (Berjalan di `http://localhost:5173`)
 
-```bash
-# Install dependencies
-npm --prefix frontend install
+**Option B (Root Monorepo Runner):**
+- Di root monorepo: `npm run dev:backend` dan `npm run dev:frontend`
 
-# Start frontend development server (Vite, default port 5173)
-npm --prefix frontend run dev
-```
+### Langkah 5: Verifikasi Akses Aplikasi
+- Buka browser di `http://localhost:5173`.
+- Lakukan Register akun baru atau Login menggunakan credential hasil seed.
 
 ---
 
