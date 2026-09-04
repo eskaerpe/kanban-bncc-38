@@ -21,72 +21,33 @@ export interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+const PREVIEW_USER: User = {
+  id: 999,
+  email: 'preview@guest.local',
+  name: 'Preview Guest',
+  global_role: 'GLOBAL_ADMIN',
+};
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('kanban_token') || null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [user, setUser] = useState<User | null>(PREVIEW_USER);
+  const [token, setToken] = useState<string | null>('preview-mock-token');
+  const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const storedToken = localStorage.getItem('kanban_token');
-      if (!storedToken) {
-        setUser(null);
-        setToken(null);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const data = await apiFetch<{ user: User }>('/auth/me');
-        setUser(data.user);
-        setToken(storedToken);
-      } catch (err) {
-        console.error('Auto login check failed:', err);
-        localStorage.removeItem('kanban_token');
-        setUser(null);
-        setToken(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkAuth();
+    // Bypass backend auth check for preview mode
   }, []);
 
   const login = async (email: string, password: string) => {
-    const data = await apiFetch<{ token: string; user: User }>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    });
-
-    if (data.token) {
-      localStorage.setItem('kanban_token', data.token);
-      setToken(data.token);
-      setUser(data.user);
-    }
-
-    return data;
+    return { token: 'preview-mock-token', user: PREVIEW_USER };
   };
 
   const register = async (name: string, email: string, password: string) => {
-    const data = await apiFetch<{ token: string; user: User }>('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify({ name, email, password }),
-    });
-
-    if (data.token) {
-      localStorage.setItem('kanban_token', data.token);
-      setToken(data.token);
-      setUser(data.user);
-    }
-
-    return data;
+    return { token: 'preview-mock-token', user: PREVIEW_USER };
   };
 
   const logout = () => {
-    localStorage.removeItem('kanban_token');
-    setToken(null);
-    setUser(null);
+    setUser(PREVIEW_USER);
+    setToken('preview-mock-token');
   };
 
   return (
@@ -94,7 +55,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       value={{
         user,
         token,
-        isAuthenticated: !!user,
+        isAuthenticated: true,
         loading,
         login,
         register,
@@ -106,7 +67,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   );
 };
 
-export const useAuth = (): AuthContextType => {
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
