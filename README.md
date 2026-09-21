@@ -17,9 +17,9 @@ Monorepo application for managing organization program tasks across 5 standardiz
 
 ## 🛠 Tech Stack
 
-- **Backend**: Node.js, Express.js, TypeScript, Prisma ORM, MySQL
+- **Backend**: Node.js, Express.js, TypeScript, Prisma ORM, PostgreSQL (Supabase)
 - **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, `@dnd-kit`
-- **DevOps & Production**: Nginx, PM2, Bash scripts
+- **Deployment**: Vercel (frontend + serverless API) and Supabase (PostgreSQL)
 
 ---
 

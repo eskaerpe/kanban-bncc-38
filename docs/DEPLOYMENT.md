@@ -1,103 +1,62 @@
-# Deployment & Production Setup — BNCC Proker Kanban
+# Deployment: Vercel + Supabase
 
-Dokumen ini menjelaskan prosedur deployment aplikasi BNCC Proker Kanban pada server VPS (Ubuntu 22.04 LTS) tanpa Docker, menggunakan PM2 dan Nginx.
+Production consists of one Vercel project and one Supabase project. The preview
+branches are separate: `preview-no-login` and `gh-pages-preview` are static,
+dummy-data prototypes and must not be merged into the production deployment.
 
-## 1. Prerequisites Server
-- Ubuntu 22.04 LTS (VPS).
-- Node.js v18.x / v20.x & npm.
-- MySQL Server 8.0+.
-- PM2 (Process Manager): `npm install -g pm2`.
-- Nginx Web Server.
+## Supabase
 
-## 2. Environment Variables Setup
+1. Create a Supabase project.
+2. Copy the pooler connection string into `DATABASE_URL`.
+3. Copy the direct database connection string into `DIRECT_URL`.
+4. Run the migration from the repository root:
 
-Buat file `.env` di folder root backend:
-
-```env
-PORT=5000
-NODE_ENV=production
-
-# Database Configuration
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=bncc_kanban_user
-DB_PASSWORD=YourStrongPasswordHere
-DB_NAME=bncc_kanban_db
-
-# Security & JWT
-JWT_SECRET=super_secret_jwt_key_bncc_2026_change_this
-JWT_EXPIRES_IN=7d
-
-# CORS
-CORS_ORIGIN=https://kanban.bncc.net
-```
-
-## 3. Database Migration Steps
-1. Masuk ke MySQL CLI: `mysql -u root -p`.
-2. Buat database & user:
-   ```sql
-   CREATE DATABASE bncc_kanban_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   CREATE USER 'bncc_kanban_user'@'localhost' IDENTIFIED BY 'YourStrongPasswordHere';
-   GRANT ALL PRIVILEGES ON bncc_kanban_db.* TO 'bncc_kanban_user'@'localhost';
-   FLUSH PRIVILEGES;
-   ```
-3. Eksekusi file DDL: `mysql -u bncc_kanban_user -p bncc_kanban_db < docs/schema.sql`.
-
-## 4. Frontend Build & Backend PM2 Run
-
-### Backend
 ```bash
 cd backend
-npm install --production
-pm2 start server.js --name "bncc-kanban-api"
-pm2 save
+npm install
+npx prisma migrate deploy
+npx prisma db seed
 ```
 
-### Frontend Build
+`DATABASE_URL` is used by the serverless runtime. `DIRECT_URL` is used by Prisma
+CLI migrations and must not be exposed to the frontend.
+
+## Vercel
+
+Import the repository as a Vercel project using the repository root as the
+project root. `vercel.json` routes `/api/*` to the Express serverless handler
+and serves the Vite build for all other paths.
+
+Configure these Vercel environment variables for Production and Preview:
+
+```env
+DATABASE_URL=...
+DIRECT_URL=...
+JWT_SECRET=...
+CORS_ORIGIN=https://your-project.vercel.app
+```
+
+Do not set `VITE_API_BASE_URL` in the unified deployment; the frontend then
+uses the same-origin `/api` route. For a separately hosted frontend, set it to
+the full backend API URL ending in `/api`.
+
+Deploy with:
+
 ```bash
-cd frontend
 npm install
 npm run build
-# Output build akan ada di folder frontend/dist
 ```
 
-## 5. Nginx Configuration
+The Vercel build command is defined in `vercel.json` and generates Prisma Client
+before building the frontend.
 
-Buat konfigurasi site Nginx `/etc/nginx/sites-available/bncc-kanban`:
+## Local development
 
-```nginx
-server {
-    listen 80;
-    server_name kanban.bncc.net;
+Copy `.env.example` to `backend/.env`, fill in Supabase credentials, then run:
 
-    # Frontend Static Files
-    location / {
-        root /var/www/bncc-kanban/frontend/dist;
-        index index.html;
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Backend API Reverse Proxy
-    location /api/ {
-        proxy_pass http://localhost:5000/api/;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-```
-
-Enable site & SSL Certbot:
 ```bash
-sudo ln -s /etc/nginx/sites-available/bncc-kanban /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl reload nginx
-sudo certbot --nginx -d kanban.bncc.net
+npm run dev:backend
+npm run dev:frontend
 ```
 
-## 6. Smoke Test (Post-Deploy Checklist)
-1. Buka `https://kanban.bncc.net` -> Pastikan halaman Login muncul.
-2. Login dengan akun Global Admin -> Pastikan Dashboard Proker memuat data.
-3. Test buat 1 Card & pindahkan status -> Cek apakah API return 200 OK.
+The frontend Vite proxy forwards `/api` requests to `http://localhost:5000`.

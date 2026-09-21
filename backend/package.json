@@ -13,6 +13,9 @@
     "prisma:validate": "npx prisma validate",
     "prisma:seed": "ts-node prisma/seed.ts"
   },
+  "engines": {
+    "node": ">=20"
+  },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
   },
