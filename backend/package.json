@@ -11,7 +11,8 @@
     "prisma:deploy": "npx prisma migrate deploy",
     "prisma:generate": "npx prisma generate",
     "prisma:validate": "npx prisma validate",
-    "prisma:seed": "ts-node prisma/seed.ts"
+    "prisma:seed": "ts-node prisma/seed.ts",
+    "test:smoke": "npm run build && node scripts/smoke-test.cjs"
   },
   "engines": {
     "node": ">=20"

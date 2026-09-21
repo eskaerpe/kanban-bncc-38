@@ -35,15 +35,12 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
 
-    const userCount = await prisma.user.count();
-    const userRole: GlobalRole = userCount === 0 ? GlobalRole.GLOBAL_ADMIN : GlobalRole.USER;
-
     const user = await prisma.user.create({
       data: {
         email,
         password_hash,
         name,
-        global_role: userRole,
+        global_role: GlobalRole.USER,
       },
       select: {
         id: true,

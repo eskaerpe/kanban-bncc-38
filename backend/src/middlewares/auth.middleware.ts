@@ -2,12 +2,13 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { JWTPayload } from '../types/express';
 import { JWT_SECRET } from '../config/jwt';
+import { prisma } from '../lib/prisma';
 
-export const authenticateJWT = (
+export const authenticateJWT = async (
   req: Request,
   res: Response,
   next: NextFunction
-): void => {
+): Promise<void> => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -19,7 +20,17 @@ export const authenticateJWT = (
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
-    req.user = decoded;
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: { id: true, email: true, global_role: true },
+    });
+
+    if (!user || user.email !== decoded.email) {
+      res.status(401).json({ message: 'Unauthorized: User no longer exists' });
+      return;
+    }
+
+    req.user = user;
     next();
   } catch (error) {
     res.status(401).json({ message: 'Unauthorized: Invalid or expired token' });

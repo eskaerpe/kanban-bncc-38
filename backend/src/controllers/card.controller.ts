@@ -213,18 +213,7 @@ export const updateCard = async (req: Request, res: Response): Promise<void> => 
           return;
         }
 
-        await prisma.cardRevision.create({
-          data: {
-            card_id: cardId,
-            user_id: userId,
-            note: revision_note.trim(),
-          },
-        });
-
-        await logCardActivity(cardId, userId, 'REVISION_ADDED', `Requested revision: "${revision_note.trim()}"`);
       }
-
-      await logCardActivity(cardId, userId, 'STATUS_CHANGED', `Moved card status from ${card.status} to ${status}`);
     }
 
     const dataToUpdate: any = {};
@@ -243,30 +232,62 @@ export const updateCard = async (req: Request, res: Response): Promise<void> => 
       dataToUpdate.status = status as CardStatus;
     }
 
-    const updatedCard = await prisma.card.update({
-      where: { id: cardId },
-      data: dataToUpdate,
-      include: {
-        division: true,
-        assignees: {
-          include: {
-            user: { select: { id: true, name: true, email: true } },
+    const updatedCard = await prisma.$transaction(async (tx) => {
+      if (status && status !== card.status && status === CardStatus.REVISION && revision_note) {
+        await tx.cardRevision.create({
+          data: {
+            card_id: cardId,
+            user_id: userId,
+            note: revision_note.trim(),
+          },
+        });
+
+        await tx.cardActivity.create({
+          data: {
+            card_id: cardId,
+            user_id: userId,
+            action_type: 'REVISION_ADDED',
+            description: `Requested revision: \"${revision_note.trim()}\"`,
+          },
+        });
+      }
+
+      if (status && status !== card.status) {
+        await tx.cardActivity.create({
+          data: {
+            card_id: cardId,
+            user_id: userId,
+            action_type: 'STATUS_CHANGED',
+            description: `Moved card status from ${card.status} to ${status}`,
+          },
+        });
+      }
+
+      return tx.card.update({
+        where: { id: cardId },
+        data: dataToUpdate,
+        include: {
+          division: true,
+          assignees: {
+            include: {
+              user: { select: { id: true, name: true, email: true } },
+            },
+          },
+          attachments: true,
+          revisions: {
+            include: {
+              user: { select: { id: true, name: true, email: true } },
+            },
+            orderBy: { created_at: 'desc' },
+          },
+          activities: {
+            include: {
+              user: { select: { id: true, name: true, email: true } },
+            },
+            orderBy: { created_at: 'desc' },
           },
         },
-        attachments: true,
-        revisions: {
-          include: {
-            user: { select: { id: true, name: true, email: true } },
-          },
-          orderBy: { created_at: 'desc' },
-        },
-        activities: {
-          include: {
-            user: { select: { id: true, name: true, email: true } },
-          },
-          orderBy: { created_at: 'desc' },
-        },
-      },
+      });
     });
 
     res.json({ message: 'Card updated successfully', card: updatedCard });

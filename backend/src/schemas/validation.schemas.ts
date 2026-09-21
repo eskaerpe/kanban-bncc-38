@@ -17,45 +17,48 @@ export const loginSchema = z.object({
 
 export const createBoardSchema = z.object({
   body: z.object({
-    name: z.string().min(1, { message: 'Board name is required' }),
+    title: z.string().trim().min(1, { message: 'Board title is required' }),
     description: z.string().optional(),
   }),
 });
 
 export const updateBoardSchema = z.object({
   body: z.object({
-    name: z.string().min(1, { message: 'Board name cannot be empty' }).optional(),
+    title: z.string().trim().min(1, { message: 'Board title cannot be empty' }).optional(),
     description: z.string().nullable().optional(),
+    status: z.enum(['ACTIVE', 'ARCHIVED']).optional(),
   }),
 });
 
 export const addBoardMemberSchema = z.object({
   body: z.object({
-    user_id: z.number({ message: 'User ID is required' }),
+    user_id: z.number().int().positive({ message: 'User ID is required' }),
     role: z.enum(['BOARD_ADMIN', 'KOOR_DIVISION', 'STAFF'], {
       message: 'Invalid board role',
     }),
-    division_id: z.number().nullable().optional(),
+    division_id: z.number().int().positive().nullable().optional(),
   }),
 });
 
 export const createCardSchema = z.object({
   body: z.object({
-    division_id: z.number({ message: 'Division ID is required' }),
-    title: z.string().min(1, { message: 'Title is required' }),
+    division_id: z.number().int().positive({ message: 'Division ID is required' }),
+    title: z.string().trim().min(1, { message: 'Title is required' }),
     description: z.string().nullable().optional(),
     priority: z.enum(['LOW', 'MID', 'HIGH']).optional(),
-    due_date: z.string().nullable().optional(),
+    due_date: z.string().datetime({ offset: true }).nullable().optional(),
   }),
 });
 
 export const updateCardSchema = z.object({
   body: z.object({
-    title: z.string().min(1, { message: 'Title cannot be empty' }).optional(),
+    title: z.string().trim().min(1, { message: 'Title cannot be empty' }).optional(),
     description: z.string().nullable().optional(),
     priority: z.enum(['LOW', 'MID', 'HIGH']).optional(),
-    due_date: z.string().nullable().optional(),
-    division_id: z.number().optional(),
+    due_date: z.string().datetime({ offset: true }).nullable().optional(),
+    division_id: z.number().int().positive().optional(),
+    status: z.enum(['TO_DO', 'ON_PROGRESS', 'ON_QC', 'REVISION', 'DONE']).optional(),
+    revision_note: z.string().trim().optional(),
   }),
 });
 
@@ -71,6 +74,6 @@ export const moveCardSchema = z.object({
 
 export const addAssigneeSchema = z.object({
   body: z.object({
-    user_id: z.number({ message: 'User ID is required' }),
+    user_id: z.number().int().positive({ message: 'User ID is required' }),
   }),
 });

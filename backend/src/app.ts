@@ -1,6 +1,6 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth.routes';
@@ -8,8 +8,6 @@ import boardRoutes from './routes/board.routes';
 import cardRoutes from './routes/card.routes';
 import attachmentRoutes from './routes/attachment.routes';
 import lookupRoutes from './routes/lookup.routes';
-
-dotenv.config();
 
 const app = express();
 
@@ -21,6 +19,10 @@ const corsOrigin = process.env.CORS_ORIGIN
 
 app.use(cors({ origin: corsOrigin }));
 app.use(express.json());
+
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'OK', message: 'BNCC Proker Kanban API Server (Vercel Serverless Ready)' });
+});
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -43,9 +45,5 @@ app.use('/api/boards', boardRoutes);
 app.use('/api/cards', cardRoutes);
 app.use('/api', attachmentRoutes);
 app.use('/api', lookupRoutes);
-
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'BNCC Proker Kanban API Server (Vercel Serverless Ready)' });
-});
 
 export default app;
