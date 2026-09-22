@@ -51,35 +51,33 @@ kanban-bncc/
 
 ---
 
-## 💻 Local Development Setup (XAMPP MySQL & Node.js)
+## 💻 Local Development Setup (PostgreSQL/Supabase & Node.js)
 
-### Langkah 1: Persiapan Database XAMPP MySQL
-1. Buka **XAMPP Control Panel** di Windows dan jalankan service **MySQL** (dan Apache jika menggunakan phpMyAdmin).
-2. Buat database baru bernama `kanban_bncc` melalui phpMyAdmin (`http://localhost/phpmyadmin`) atau MySQL CLI.
+### Langkah 1: Persiapan Database PostgreSQL/Supabase
+1. Buat project PostgreSQL/Supabase.
+2. Siapkan connection pooler untuk `DATABASE_URL` dan direct connection untuk `DIRECT_URL`.
+3. Jangan menaruh nilai credential nyata di repository atau frontend.
 
 ### Langkah 2: Konfigurasi Environment File
-1. Di direktori `backend/`, buat/perbarui file `.env`:
+1. Di direktori `backend/`, salin `.env.example` menjadi `.env` lalu isi nilai lokal:
    ```env
-   DATABASE_URL="mysql://root:@localhost:3306/kanban_bncc"
+   DATABASE_URL="postgresql://<user>:<password>@<pooler-host>:5432/<database>?pgbouncer=true"
+   DIRECT_URL="postgresql://<user>:<password>@<direct-host>:5432/<database>"
    PORT=5000
-   JWT_SECRET="kanban...2026"
+   JWT_SECRET="<minimum-32-character-secret>"
    CORS_ORIGIN="http://localhost:5173"
    ```
-
-2. Di direktori `frontend/`, buat/perbarui file `.env`:
-   ```env
-   VITE_API_BASE_URL="http://localhost:5000/api"
-   ```
+2. Frontend memakai same-origin `/api` pada deployment terpadu. Untuk development, ikuti konfigurasi proxy di `frontend/vite.config.js`.
 
 ### Langkah 3: Database Migration & Seeding (Prisma)
-Jalankan perintah berikut di folder `backend/`:
+Jalankan perintah berikut dari folder `backend/`:
 ```bash
 cd backend
 npm install
-npx prisma migrate dev --name init
+npx prisma migrate deploy
 npx prisma db seed
 ```
-*(Perintah ini akan membuat struktur tabel di MySQL XAMPP dan mengisi data divisi standar BNCC serta akun seed default).*
+`backend/prisma/` adalah canonical Prisma source. Perintah tersebut menargetkan PostgreSQL/Supabase.
 
 ### Langkah 4: Jalankan Server Backend & Frontend
 **Option A (Terminal Terpisah):**
