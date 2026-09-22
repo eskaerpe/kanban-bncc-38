@@ -2,6 +2,13 @@ import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { BoardRole, CardPriority, CardStatus, GlobalRole } from '@prisma/client';
 import { logCardActivity } from '../lib/activity';
+import { canApproveQc } from '../policies/authorization.policy';
+import {
+  hasValidRevisionNote,
+  isAllowedCardTransition,
+  isQcDecision,
+  workflowTransitionError,
+} from '../policies/workflow.policy';
 
 export const createCard = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -194,25 +201,22 @@ export const updateCard = async (req: Request, res: Response): Promise<void> => 
 
     const { title, description, priority, due_date, division_id, status, revision_note } = req.body;
 
-    // Check status change & QC Gatekeeper rules if status is being updated via PUT
+    // All status changes use the same workflow policy, including PUT callers.
     if (status && status !== card.status) {
-      const isBoardAdmin = member?.role === BoardRole.BOARD_ADMIN;
-      const isKoorOfCardDivision = member?.role === BoardRole.KOOR_DIVISION && member?.division_id === card.division_id;
-      const isAuthorizedQC = isBoardAdmin || isKoorOfCardDivision || globalRole === GlobalRole.GLOBAL_ADMIN;
-
-      if (card.status === CardStatus.ON_QC && (status === CardStatus.DONE || status === CardStatus.REVISION)) {
-        if (!isAuthorizedQC) {
-          res.status(403).json({ message: 'Hanya Koor Divisi atau Admin yang berhak menyetujui/merevisi QC' });
-          return;
-        }
+      const targetStatus = status as CardStatus;
+      if (!isAllowedCardTransition(card.status, targetStatus)) {
+        res.status(400).json({ message: workflowTransitionError(card.status, targetStatus) });
+        return;
       }
 
-      if (status === CardStatus.REVISION) {
-        if (!revision_note || typeof revision_note !== 'string' || revision_note.trim().length < 5) {
-          res.status(400).json({ message: 'Catatan revisi wajib diisi (minimal 5 karakter)' });
-          return;
-        }
+      if (isQcDecision(card.status, targetStatus) && !canApproveQc(member, globalRole, card)) {
+        res.status(403).json({ message: 'Hanya Koor Divisi atau Admin yang berhak menyetujui/merevisi QC' });
+        return;
+      }
 
+      if (targetStatus === CardStatus.REVISION && !hasValidRevisionNote(revision_note)) {
+        res.status(400).json({ message: 'Catatan revisi wajib diisi (minimal 5 karakter)' });
+        return;
       }
     }
 
@@ -344,24 +348,22 @@ export const moveCard = async (req: Request, res: Response): Promise<void> => {
     const targetStatus = status as CardStatus;
     const targetPosition = typeof position === 'number' && position >= 0 ? position : 0;
 
-    // Check QC Gatekeeper rules when moving card from ON_QC to DONE or REVISION
-    if (card.status === CardStatus.ON_QC && (targetStatus === CardStatus.DONE || targetStatus === CardStatus.REVISION)) {
-      const isBoardAdmin = member?.role === BoardRole.BOARD_ADMIN;
-      const isKoorOfCardDivision = member?.role === BoardRole.KOOR_DIVISION && member?.division_id === card.division_id;
-      const isAuthorizedQC = isBoardAdmin || isKoorOfCardDivision || globalRole === GlobalRole.GLOBAL_ADMIN;
+    // Enforce the same finite-state workflow for PATCH and PUT callers.
+    if (!isAllowedCardTransition(card.status, targetStatus)) {
+      res.status(400).json({ message: workflowTransitionError(card.status, targetStatus) });
+      return;
+    }
 
-      if (!isAuthorizedQC) {
-        res.status(403).json({ message: 'Hanya Koor Divisi atau Admin yang berhak menyetujui/merevisi QC' });
-        return;
-      }
+    // Check QC Gatekeeper rules when moving card from ON_QC to DONE or REVISION
+    if (isQcDecision(card.status, targetStatus) && !canApproveQc(member, globalRole, card)) {
+      res.status(403).json({ message: 'Hanya Koor Divisi atau Admin yang berhak menyetujui/merevisi QC' });
+      return;
     }
 
     // Mandatory revision note when rejecting to REVISION
-    if (targetStatus === CardStatus.REVISION) {
-      if (!revision_note || typeof revision_note !== 'string' || revision_note.trim().length < 5) {
-        res.status(400).json({ message: 'Catatan revisi wajib diisi (minimal 5 karakter)' });
-        return;
-      }
+    if (targetStatus === CardStatus.REVISION && !hasValidRevisionNote(revision_note)) {
+      res.status(400).json({ message: 'Catatan revisi wajib diisi (minimal 5 karakter)' });
+      return;
     }
 
     const updatedCard = await prisma.$transaction(async (tx) => {
