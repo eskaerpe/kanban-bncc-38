@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { BoardRole, BoardStatus, GlobalRole } from '@prisma/client';
+import { isSuperAdmin } from '../policies/authorization.policy';
 
 export const createBoard = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -70,7 +71,7 @@ export const getBoards = async (req: Request, res: Response): Promise<void> => {
       whereClause.status = filterStatus;
     }
 
-    if (globalRole !== GlobalRole.GLOBAL_ADMIN) {
+    if (!isSuperAdmin(req.user || globalRole)) {
       whereClause.board_members = {
         some: {
           user_id: userId,
@@ -137,7 +138,7 @@ export const getBoardById = async (req: Request, res: Response): Promise<void> =
     }
 
     const isMember = board.board_members.some((m) => m.user_id === userId);
-    if (!isMember && globalRole !== GlobalRole.GLOBAL_ADMIN) {
+    if (!isMember && !isSuperAdmin(req.user || globalRole)) {
       res.status(403).json({ message: 'Forbidden: You are not a member of this board' });
       return;
     }
@@ -180,8 +181,8 @@ export const updateBoard = async (req: Request, res: Response): Promise<void> =>
     const member = board.board_members.find((m) => m.user_id === userId);
     const isBoardAdmin = member?.role === BoardRole.BOARD_ADMIN;
 
-    if (!isBoardAdmin && globalRole !== GlobalRole.GLOBAL_ADMIN) {
-      res.status(403).json({ message: 'Forbidden: Only Board Admin or Global Admin can update board settings' });
+    if (!isBoardAdmin && !isSuperAdmin(req.user || globalRole)) {
+      res.status(403).json({ message: 'Forbidden: Only Board Admin or Super Admin can update board settings' });
       return;
     }
 
@@ -247,8 +248,8 @@ export const deleteBoard = async (req: Request, res: Response): Promise<void> =>
     const member = board.board_members.find((m) => m.user_id === userId);
     const isBoardAdmin = member?.role === BoardRole.BOARD_ADMIN;
 
-    if (!isBoardAdmin && globalRole !== GlobalRole.GLOBAL_ADMIN) {
-      res.status(403).json({ message: 'Forbidden: Only Board Admin or Global Admin can delete board' });
+    if (!isBoardAdmin && !isSuperAdmin(req.user || globalRole)) {
+      res.status(403).json({ message: 'Forbidden: Only Board Admin or Super Admin can delete board' });
       return;
     }
 
@@ -298,8 +299,8 @@ export const addBoardMember = async (req: Request, res: Response): Promise<void>
     const currentMember = board.board_members.find((m) => m.user_id === userId);
     const isBoardAdmin = currentMember?.role === BoardRole.BOARD_ADMIN;
 
-    if (!isBoardAdmin && globalRole !== GlobalRole.GLOBAL_ADMIN) {
-      res.status(403).json({ message: 'Forbidden: Only Board Admin or Global Admin can manage members' });
+    if (!isBoardAdmin && !isSuperAdmin(req.user || globalRole)) {
+      res.status(403).json({ message: 'Forbidden: Only Board Admin or Super Admin can manage members' });
       return;
     }
 
@@ -391,8 +392,8 @@ export const removeBoardMember = async (req: Request, res: Response): Promise<vo
     const currentMember = board.board_members.find((m) => m.user_id === userId);
     const isBoardAdmin = currentMember?.role === BoardRole.BOARD_ADMIN;
 
-    if (!isBoardAdmin && globalRole !== GlobalRole.GLOBAL_ADMIN) {
-      res.status(403).json({ message: 'Forbidden: Only Board Admin or Global Admin can remove members' });
+    if (!isBoardAdmin && !isSuperAdmin(req.user || globalRole)) {
+      res.status(403).json({ message: 'Forbidden: Only Board Admin or Super Admin can remove members' });
       return;
     }
 

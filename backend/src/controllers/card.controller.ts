@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { BoardRole, CardPriority, CardStatus, GlobalRole } from '@prisma/client';
 import { logCardActivity } from '../lib/activity';
-import { canApproveQc } from '../policies/authorization.policy';
+import { canApproveQc, isSuperAdmin } from '../policies/authorization.policy';
 import {
   hasValidRevisionNote,
   isAllowedCardTransition,
@@ -37,7 +37,7 @@ export const createCard = async (req: Request, res: Response): Promise<void> => 
     }
 
     const isMember = board.board_members.some((m) => m.user_id === userId);
-    if (!isMember && globalRole !== GlobalRole.GLOBAL_ADMIN) {
+    if (!isMember && !isSuperAdmin(req.user || globalRole)) {
       res.status(403).json({ message: 'Forbidden: You are not a member of this board' });
       return;
     }
@@ -124,7 +124,7 @@ export const getBoardCards = async (req: Request, res: Response): Promise<void> 
     }
 
     const isMember = board.board_members.some((m) => m.user_id === userId);
-    if (!isMember && globalRole !== GlobalRole.GLOBAL_ADMIN) {
+    if (!isMember && !isSuperAdmin(req.user || globalRole)) {
       res.status(403).json({ message: 'Forbidden: You are not a member of this board' });
       return;
     }
@@ -184,6 +184,7 @@ export const updateCard = async (req: Request, res: Response): Promise<void> => 
         board: {
           include: { board_members: true },
         },
+        assignees: true,
       },
     });
 
@@ -194,7 +195,7 @@ export const updateCard = async (req: Request, res: Response): Promise<void> => 
 
     const member = card.board.board_members.find((m) => m.user_id === userId);
     const isMember = !!member;
-    if (!isMember && globalRole !== GlobalRole.GLOBAL_ADMIN) {
+    if (!isMember && !isSuperAdmin(req.user || globalRole)) {
       res.status(403).json({ message: 'Forbidden: You are not a member of this board' });
       return;
     }
@@ -209,9 +210,17 @@ export const updateCard = async (req: Request, res: Response): Promise<void> => 
         return;
       }
 
-      if (isQcDecision(card.status, targetStatus) && !canApproveQc(member, globalRole, card)) {
-        res.status(403).json({ message: 'Hanya Koor Divisi atau Admin yang berhak menyetujui/merevisi QC' });
-        return;
+      if (isQcDecision(card.status, targetStatus)) {
+        const isSelfAssigned = card.assignees.some((a) => a.user_id === userId);
+        if (isSelfAssigned && !req.user?.is_super_admin) {
+          res.status(403).json({ message: 'Self-approval dilarang: Pelaksana tugas tidak boleh menyetujui atau merevisi QC atas kartunya sendiri' });
+          return;
+        }
+
+        if (!canApproveQc(member, req.user || globalRole, card, userId)) {
+          res.status(403).json({ message: 'Hanya Koor Divisi atau Admin yang berhak menyetujui/merevisi QC' });
+          return;
+        }
       }
 
       if (targetStatus === CardStatus.REVISION && !hasValidRevisionNote(revision_note)) {
@@ -323,6 +332,7 @@ export const moveCard = async (req: Request, res: Response): Promise<void> => {
         board: {
           include: { board_members: true },
         },
+        assignees: true,
       },
     });
 
@@ -333,7 +343,7 @@ export const moveCard = async (req: Request, res: Response): Promise<void> => {
 
     const member = card.board.board_members.find((m) => m.user_id === userId);
     const isMember = !!member;
-    if (!isMember && globalRole !== GlobalRole.GLOBAL_ADMIN) {
+    if (!isMember && !isSuperAdmin(req.user || globalRole)) {
       res.status(403).json({ message: 'Forbidden: You are not a member of this board' });
       return;
     }
@@ -355,9 +365,17 @@ export const moveCard = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Check QC Gatekeeper rules when moving card from ON_QC to DONE or REVISION
-    if (isQcDecision(card.status, targetStatus) && !canApproveQc(member, globalRole, card)) {
-      res.status(403).json({ message: 'Hanya Koor Divisi atau Admin yang berhak menyetujui/merevisi QC' });
-      return;
+    if (isQcDecision(card.status, targetStatus)) {
+      const isSelfAssigned = card.assignees.some((a) => a.user_id === userId);
+      if (isSelfAssigned && !req.user?.is_super_admin) {
+        res.status(403).json({ message: 'Self-approval dilarang: Pelaksana tugas tidak boleh menyetujui atau merevisi QC atas kartunya sendiri' });
+        return;
+      }
+
+      if (!canApproveQc(member, req.user || globalRole, card, userId)) {
+        res.status(403).json({ message: 'Hanya Koor Divisi atau Admin yang berhak menyetujui/merevisi QC' });
+        return;
+      }
     }
 
     // Mandatory revision note when rejecting to REVISION
@@ -528,8 +546,8 @@ export const deleteCard = async (req: Request, res: Response): Promise<void> => 
     const isBoardAdmin = member?.role === BoardRole.BOARD_ADMIN;
     const isKoorDivisionOfCard = member?.role === BoardRole.KOOR_DIVISION && member?.division_id === card.division_id;
 
-    if (!isBoardAdmin && !isKoorDivisionOfCard && globalRole !== GlobalRole.GLOBAL_ADMIN) {
-      res.status(403).json({ message: 'Forbidden: Only Board Admin, Division Koor, or Global Admin can delete this card' });
+    if (!isBoardAdmin && !isKoorDivisionOfCard && !isSuperAdmin(req.user || globalRole)) {
+      res.status(403).json({ message: 'Forbidden: Only Board Admin, Division Koor, or Super Admin can delete this card' });
       return;
     }
 
@@ -573,7 +591,7 @@ export const addAssignee = async (req: Request, res: Response): Promise<void> =>
     }
 
     const isMember = card.board.board_members.some((m) => m.user_id === userId);
-    if (!isMember && globalRole !== GlobalRole.GLOBAL_ADMIN) {
+    if (!isMember && !isSuperAdmin(req.user || globalRole)) {
       res.status(403).json({ message: 'Forbidden: You are not a member of this board' });
       return;
     }
@@ -681,7 +699,7 @@ export const removeAssignee = async (req: Request, res: Response): Promise<void>
     }
 
     const isMember = card.board.board_members.some((m) => m.user_id === userId);
-    if (!isMember && globalRole !== GlobalRole.GLOBAL_ADMIN) {
+    if (!isMember && !isSuperAdmin(req.user || globalRole)) {
       res.status(403).json({ message: 'Forbidden: You are not a member of this board' });
       return;
     }

@@ -7,6 +7,7 @@ import authRoutes from './routes/auth.routes';
 import boardRoutes from './routes/board.routes';
 import cardRoutes from './routes/card.routes';
 import attachmentRoutes from './routes/attachment.routes';
+import adminRoutes from './routes/admin.routes';
 import lookupRoutes from './routes/lookup.routes';
 
 const app = express();
@@ -41,6 +42,7 @@ app.use('/api/auth/register', authLimiter);
 app.use('/api', apiLimiter);
 
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/boards', boardRoutes);
 app.use('/api/cards', cardRoutes);
 app.use('/api', attachmentRoutes);

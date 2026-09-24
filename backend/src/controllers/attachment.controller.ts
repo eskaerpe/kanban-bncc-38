@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { GlobalRole } from '@prisma/client';
 import { logCardActivity } from '../lib/activity';
+import { isSuperAdmin } from '../policies/authorization.policy';
 
 export const addAttachment = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -34,7 +35,7 @@ export const addAttachment = async (req: Request, res: Response): Promise<void> 
     }
 
     const isMember = card.board.board_members.some((m) => m.user_id === userId);
-    if (!isMember && globalRole !== GlobalRole.GLOBAL_ADMIN) {
+    if (!isMember && !isSuperAdmin(req.user || globalRole)) {
       res.status(403).json({ message: 'Forbidden: You are not a member of this board' });
       return;
     }
@@ -103,7 +104,7 @@ export const deleteAttachment = async (req: Request, res: Response): Promise<voi
     }
 
     const isMember = attachment.card.board.board_members.some((m) => m.user_id === userId);
-    if (!isMember && globalRole !== GlobalRole.GLOBAL_ADMIN) {
+    if (!isMember && !isSuperAdmin(req.user || globalRole)) {
       res.status(403).json({ message: 'Forbidden: You are not a member of this board' });
       return;
     }

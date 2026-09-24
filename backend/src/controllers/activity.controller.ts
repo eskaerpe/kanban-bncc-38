@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { GlobalRole } from '@prisma/client';
+import { isSuperAdmin } from '../policies/authorization.policy';
 
 export const getCardActivities = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -33,7 +34,7 @@ export const getCardActivities = async (req: Request, res: Response): Promise<vo
     }
 
     const isMember = card.board.board_members.some((m) => m.user_id === userId);
-    if (!isMember && globalRole !== GlobalRole.GLOBAL_ADMIN) {
+    if (!isMember && !isSuperAdmin(req.user || globalRole)) {
       res.status(403).json({ message: 'Forbidden: You are not a member of this board' });
       return;
     }
