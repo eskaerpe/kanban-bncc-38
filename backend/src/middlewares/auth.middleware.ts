@@ -59,7 +59,9 @@ export const authenticateJWT = async (
 
     const roles = user.user_roles.map((ur) => ur.role.code);
     const divisions = user.user_divisions.map((ud) => ud.division.code || ud.division.name);
-    const isSuperAdmin = user.global_role === 'GLOBAL_ADMIN' || roles.includes('SUPER_ADMIN');
+    const isSuperAdmin =
+      user.global_role === 'GLOBAL_ADMIN' ||
+      roles.some((r) => ['SUPER_ADMIN', 'COO', 'CFO'].includes(r));
 
     req.user = {
       id: user.id,

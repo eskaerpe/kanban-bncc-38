@@ -15,7 +15,7 @@ export type CardLikeForQc = Pick<Card, 'division_id'> & {
 };
 
 /**
- * Checks whether user has Super Admin authority (either via legacy GLOBAL_ADMIN or multi-role SUPER_ADMIN)
+ * Checks whether user has Super Admin or Executive authority (either via legacy GLOBAL_ADMIN or multi-role SUPER_ADMIN, COO, CFO)
  */
 export const isSuperAdmin = (
   userOrRole: UserContextLike | GlobalRole | undefined
@@ -27,7 +27,7 @@ export const isSuperAdmin = (
   return !!(
     userOrRole.is_super_admin ||
     userOrRole.global_role === GlobalRole.GLOBAL_ADMIN ||
-    userOrRole.roles?.includes('SUPER_ADMIN')
+    userOrRole.roles?.some((r) => ['SUPER_ADMIN', 'COO', 'CFO'].includes(r))
   );
 };
 

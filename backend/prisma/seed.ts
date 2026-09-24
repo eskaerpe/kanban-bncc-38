@@ -3,27 +3,42 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+interface SeedAccount {
+  name: string;
+  email: string;
+  global_role: GlobalRole;
+  roles: string[];
+  divisions: string[];
+  is_manager?: boolean;
+}
+
 async function main() {
-  console.log('Seeding database with canonical roles and 5 official divisions...');
+  console.log('Seeding database with canonical roles, 5 official divisions, and 19 BNCC personnel accounts...');
 
   // 1. Seed Master Roles
   const masterRoles = [
-    { code: 'SUPER_ADMIN', name: 'Super Administrator', description: 'Akses penuh sistem BNCC Kanban', is_system: true },
-    { code: 'BOARD_ADMIN', name: 'Board Administrator', description: 'Pengelola board dan anggota proker', is_system: true },
-    { code: 'KOOR_DIVISION', name: 'Division Coordinator', description: 'Koordinator peninjau dan approval QC divisi', is_system: true },
+    { code: 'SUPER_ADMIN', name: 'Super Administrator', description: 'Akses penuh teknis dan konfigurasi master sistem BNCC Kanban', is_system: true },
+    { code: 'COO', name: 'Chief Operating Officer', description: 'Akses eksekutif operasional lintas divisi dan seluruh proker', is_system: true },
+    { code: 'CFO', name: 'Chief Financial Officer', description: 'Akses eksekutif keuangan dan operasional lintas divisi dan seluruh proker', is_system: true },
+    { code: 'MANAGER_DIVISION', name: 'Division Manager', description: 'Manajer divisi struktural BNCC', is_system: true },
+    { code: 'KOOR_DIVISION', name: 'Division Coordinator', description: 'Koordinator peninjau dan approval QC divisi per proker', is_system: true },
     { code: 'STAFF', name: 'Staff Member', description: 'Anggota pelaksana proker BNCC', is_system: true },
   ];
 
-  const roleMap: Record<string, number> = {};
   for (const r of masterRoles) {
-    const roleRecord = await prisma.role.upsert({
+    await prisma.role.upsert({
       where: { code: r.code },
       update: { name: r.name, description: r.description, is_system: r.is_system },
       create: { code: r.code, name: r.name, description: r.description, is_system: r.is_system },
     });
-    roleMap[r.code] = roleRecord.id;
   }
-  console.log('Master roles seeded:', Object.keys(roleMap));
+
+  const allRoles = await prisma.role.findMany();
+  const roleMap: Record<string, number> = {};
+  allRoles.forEach((r) => {
+    roleMap[r.code] = r.id;
+  });
+  console.log('Master roles ready:', Object.keys(roleMap));
 
   // 2. Seed 5 Official BNCC Master Divisions
   const masterDivisions = [
@@ -34,163 +49,322 @@ async function main() {
     { code: 'LNT', name: 'Learning & Training', description: 'Divisi Pembelajaran dan Pelatihan' },
   ];
 
-  const divisionMap: Record<string, number> = {};
   for (const d of masterDivisions) {
-    const divRecord = await prisma.division.upsert({
+    await prisma.division.upsert({
       where: { name: d.name },
       update: { code: d.code, description: d.description },
       create: { code: d.code, name: d.name, description: d.description },
     });
-    divisionMap[d.code] = divRecord.id;
-    divisionMap[d.name] = divRecord.id;
   }
-  console.log('Official divisions seeded:', masterDivisions.map(m => m.code));
 
-  // 3. Seed/Update Demo Accounts (Password for all: password123)
-  const passwordHash = await bcrypt.hash('password123', 10);
+  const allDivisions = await prisma.division.findMany();
+  const divisionMap: Record<string, number> = {};
+  allDivisions.forEach((d) => {
+    if (d.code) divisionMap[d.code] = d.id;
+    divisionMap[d.name] = d.id;
+  });
+  console.log('Official divisions ready:', Object.keys(divisionMap));
 
-  const adminUser = await prisma.user.upsert({
-    where: { email: 'admin@bncc.net' },
-    update: { password_hash: passwordHash, global_role: GlobalRole.GLOBAL_ADMIN, is_active: true },
-    create: {
-      email: 'admin@bncc.net',
-      name: 'Admin BNCC',
-      password_hash: passwordHash,
+  // 3. Personnel Accounts Definition (19 Accounts)
+  const defaultPasswordHash = await bcrypt.hash('password123', 10);
+  const allDivisionCodes = ['PR', 'EEO', 'HRD', 'RND', 'LNT'];
+
+  const accounts: SeedAccount[] = [
+    // Executive / C-Level
+    {
+      name: 'Gregory',
+      email: 'gregory.all@bncc.net',
       global_role: GlobalRole.GLOBAL_ADMIN,
-      is_active: true,
-      token_version: 1,
+      roles: ['COO', 'STAFF'],
+      divisions: allDivisionCodes,
     },
-  });
+    {
+      name: 'Abiyyu',
+      email: 'abiyyu.all@bncc.net',
+      global_role: GlobalRole.GLOBAL_ADMIN,
+      roles: ['CFO', 'STAFF'],
+      divisions: allDivisionCodes,
+    },
 
-  const koorUser = await prisma.user.upsert({
-    where: { email: 'koor.pr@bncc.net' },
-    update: { password_hash: passwordHash, is_active: true },
-    create: {
-      email: 'koor.pr@bncc.net',
-      name: 'Budi (Koor PR)',
-      password_hash: passwordHash,
+    // RND
+    {
+      name: 'Reihan',
+      email: 'reihan.rnd@bncc.net',
+      global_role: GlobalRole.GLOBAL_ADMIN,
+      roles: ['SUPER_ADMIN', 'MANAGER_DIVISION', 'STAFF'],
+      divisions: ['RND'],
+      is_manager: true,
+    },
+    {
+      name: 'Nevan',
+      email: 'nevan.rnd@bncc.net',
       global_role: GlobalRole.USER,
-      is_active: true,
-      token_version: 1,
+      roles: ['STAFF'],
+      divisions: ['RND'],
     },
-  });
-
-  const staffUser = await prisma.user.upsert({
-    where: { email: 'staff.pr@bncc.net' },
-    update: { password_hash: passwordHash, is_active: true },
-    create: {
-      email: 'staff.pr@bncc.net',
-      name: 'Siti (Staff PR)',
-      password_hash: passwordHash,
+    {
+      name: 'Raven',
+      email: 'raven.rnd@bncc.net',
       global_role: GlobalRole.USER,
-      is_active: true,
-      token_version: 1,
+      roles: ['STAFF'],
+      divisions: ['RND'],
     },
-  });
 
-  // 4. Backfill & Map Multi-Role Junction Table (UserRole)
-  // Admin: SUPER_ADMIN + STAFF
-  await prisma.userRole.upsert({
-    where: { user_id_role_id: { user_id: adminUser.id, role_id: roleMap['SUPER_ADMIN'] } },
-    update: {},
-    create: { user_id: adminUser.id, role_id: roleMap['SUPER_ADMIN'] },
-  });
-  await prisma.userRole.upsert({
-    where: { user_id_role_id: { user_id: adminUser.id, role_id: roleMap['STAFF'] } },
-    update: {},
-    create: { user_id: adminUser.id, role_id: roleMap['STAFF'] },
-  });
+    // EEO
+    {
+      name: 'Devania',
+      email: 'devania.eeo@bncc.net',
+      global_role: GlobalRole.USER,
+      roles: ['MANAGER_DIVISION', 'STAFF'],
+      divisions: ['EEO'],
+      is_manager: true,
+    },
+    {
+      name: 'Alif',
+      email: 'alif.eeo@bncc.net',
+      global_role: GlobalRole.USER,
+      roles: ['STAFF'],
+      divisions: ['EEO'],
+    },
 
-  // Koor: STAFF
-  await prisma.userRole.upsert({
-    where: { user_id_role_id: { user_id: koorUser.id, role_id: roleMap['STAFF'] } },
-    update: {},
-    create: { user_id: koorUser.id, role_id: roleMap['STAFF'] },
-  });
+    // HRD
+    {
+      name: 'Natalie',
+      email: 'natalie.hrd@bncc.net',
+      global_role: GlobalRole.USER,
+      roles: ['MANAGER_DIVISION', 'STAFF'],
+      divisions: ['HRD'],
+      is_manager: true,
+    },
+    {
+      name: 'Givara',
+      email: 'givara.hrd@bncc.net',
+      global_role: GlobalRole.USER,
+      roles: ['STAFF'],
+      divisions: ['HRD'],
+    },
+    {
+      name: 'Dialova',
+      email: 'dialova.hrd@bncc.net',
+      global_role: GlobalRole.USER,
+      roles: ['STAFF'],
+      divisions: ['HRD'],
+    },
 
-  // Staff: STAFF
-  await prisma.userRole.upsert({
-    where: { user_id_role_id: { user_id: staffUser.id, role_id: roleMap['STAFF'] } },
-    update: {},
-    create: { user_id: staffUser.id, role_id: roleMap['STAFF'] },
-  });
+    // PR
+    {
+      name: 'Adin',
+      email: 'adin.pr@bncc.net',
+      global_role: GlobalRole.USER,
+      roles: ['MANAGER_DIVISION', 'STAFF'],
+      divisions: ['PR'],
+      is_manager: true,
+    },
+    {
+      name: 'Felicia IDT',
+      email: 'feliciaIDT.pr@bncc.net',
+      global_role: GlobalRole.USER,
+      roles: ['STAFF'],
+      divisions: ['PR'],
+    },
+    {
+      name: 'Nabiel',
+      email: 'nabiel.pr@bncc.net',
+      global_role: GlobalRole.USER,
+      roles: ['STAFF'],
+      divisions: ['PR'],
+    },
+    {
+      name: 'Daniel',
+      email: 'daniel.pr@bncc.net',
+      global_role: GlobalRole.USER,
+      roles: ['STAFF'],
+      divisions: ['PR'],
+    },
+    {
+      name: 'Queen',
+      email: 'queen.pr@bncc.net',
+      global_role: GlobalRole.USER,
+      roles: ['STAFF'],
+      divisions: ['PR'],
+    },
 
-  // 5. Backfill & Map Multi-Division Junction Table (UserDivision)
-  const prDivId = divisionMap['PR'];
-  if (prDivId) {
-    await prisma.userDivision.upsert({
-      where: { user_id_division_id: { user_id: koorUser.id, division_id: prDivId } },
-      update: {},
-      create: { user_id: koorUser.id, division_id: prDivId },
+    // LNT
+    {
+      name: 'Raymond',
+      email: 'raymond.lnt@bncc.net',
+      global_role: GlobalRole.USER,
+      roles: ['MANAGER_DIVISION', 'STAFF'],
+      divisions: ['LNT'],
+      is_manager: true,
+    },
+    {
+      name: 'Marvell',
+      email: 'marvell.lnt@bncc.net',
+      global_role: GlobalRole.USER,
+      roles: ['STAFF'],
+      divisions: ['LNT'],
+    },
+    {
+      name: 'Marvella',
+      email: 'marvella.lnt@bncc.net',
+      global_role: GlobalRole.USER,
+      roles: ['STAFF'],
+      divisions: ['LNT'],
+    },
+    {
+      name: 'Felicia CS',
+      email: 'feliciaCS.lnt@bncc.net',
+      global_role: GlobalRole.USER,
+      roles: ['STAFF'],
+      divisions: ['LNT'],
+    },
+  ];
+
+  // Upsert all accounts
+  const userMap: Record<string, { id: number; name: string; email: string }> = {};
+
+  for (const acc of accounts) {
+    const user = await prisma.user.upsert({
+      where: { email: acc.email },
+      update: {
+        name: acc.name,
+        global_role: acc.global_role,
+        is_active: true,
+      },
+      create: {
+        name: acc.name,
+        email: acc.email,
+        password_hash: defaultPasswordHash,
+        global_role: acc.global_role,
+        is_active: true,
+        token_version: 1,
+      },
     });
-    await prisma.userDivision.upsert({
-      where: { user_id_division_id: { user_id: staffUser.id, division_id: prDivId } },
-      update: {},
-      create: { user_id: staffUser.id, division_id: prDivId },
-    });
+    userMap[acc.email] = { id: user.id, name: user.name, email: user.email };
   }
 
-  // 6. Seed Demo Board & Board Members
-  let demoBoard = await prisma.board.findFirst({
-    where: { title: 'Proker BNCC Launching 2026' },
-  });
+  // Bulk create user roles and user divisions with skipDuplicates
+  const userRolesToInsert: { user_id: number; role_id: number }[] = [];
+  const userDivisionsToInsert: { user_id: number; division_id: number }[] = [];
 
-  if (!demoBoard) {
-    demoBoard = await prisma.board.create({
-      data: {
-        title: 'Proker BNCC Launching 2026',
-        description: 'Board Utama Program Kerja BNCC 2026',
-        created_by: adminUser.id,
-      },
-    });
+  for (const acc of accounts) {
+    const u = userMap[acc.email];
+    if (!u) continue;
+
+    for (const rCode of acc.roles) {
+      const rId = roleMap[rCode];
+      if (rId) {
+        userRolesToInsert.push({ user_id: u.id, role_id: rId });
+      }
+    }
+
+    for (const dCode of acc.divisions) {
+      const dId = divisionMap[dCode];
+      if (dId) {
+        userDivisionsToInsert.push({ user_id: u.id, division_id: dId });
+      }
+    }
   }
 
-  await prisma.boardMember.upsert({
-    where: {
-      board_id_user_id: {
-        board_id: demoBoard.id,
-        user_id: adminUser.id,
-      },
-    },
-    update: { role: BoardRole.BOARD_ADMIN },
-    create: {
-      board_id: demoBoard.id,
-      user_id: adminUser.id,
-      role: BoardRole.BOARD_ADMIN,
-    },
+  // Clear existing mappings for these users and re-insert in bulk
+  const userIds = Object.values(userMap).map((u) => u.id);
+  await prisma.userRole.deleteMany({ where: { user_id: { in: userIds } } });
+  await prisma.userDivision.deleteMany({ where: { user_id: { in: userIds } } });
+
+  await prisma.userRole.createMany({
+    data: userRolesToInsert,
+    skipDuplicates: true,
   });
 
-  await prisma.boardMember.upsert({
-    where: {
-      board_id_user_id: {
-        board_id: demoBoard.id,
-        user_id: koorUser.id,
-      },
-    },
-    update: { role: BoardRole.KOOR_DIVISION, division_id: prDivId },
-    create: {
-      board_id: demoBoard.id,
-      user_id: koorUser.id,
-      role: BoardRole.KOOR_DIVISION,
-      division_id: prDivId,
-    },
+  await prisma.userDivision.createMany({
+    data: userDivisionsToInsert,
+    skipDuplicates: true,
   });
 
-  await prisma.boardMember.upsert({
-    where: {
-      board_id_user_id: {
-        board_id: demoBoard.id,
-        user_id: staffUser.id,
-      },
-    },
-    update: { role: BoardRole.STAFF, division_id: prDivId },
-    create: {
-      board_id: demoBoard.id,
-      user_id: staffUser.id,
-      role: BoardRole.STAFF,
-      division_id: prDivId,
-    },
+  console.log(`Seeded and mapped ${accounts.length} BNCC personnel accounts successfully.`);
+
+  // 4. Deactivate legacy demo accounts if present
+  const legacyEmails = ['admin@bncc.net', 'koor.pr@bncc.net', 'staff.pr@bncc.net'];
+  await prisma.user.updateMany({
+    where: { email: { in: legacyEmails } },
+    data: { is_active: false },
   });
+
+  // 5. Seed Demo Proker Board
+  const reihanUser = userMap['reihan.rnd@bncc.net'];
+  if (reihanUser) {
+    let demoBoard = await prisma.board.findFirst({
+      where: { title: 'Proker BNCC Launching 2026' },
+    });
+
+    if (!demoBoard) {
+      demoBoard = await prisma.board.create({
+        data: {
+          title: 'Proker BNCC Launching 2026',
+          description: 'Board Utama Program Kerja BNCC 2026',
+          created_by: reihanUser.id,
+        },
+      });
+    }
+
+    // Assign Creator/Super Admin as BOARD_ADMIN
+    await prisma.boardMember.upsert({
+      where: {
+        board_id_user_id: {
+          board_id: demoBoard.id,
+          user_id: reihanUser.id,
+        },
+      },
+      update: { role: BoardRole.BOARD_ADMIN },
+      create: {
+        board_id: demoBoard.id,
+        user_id: reihanUser.id,
+        role: BoardRole.BOARD_ADMIN,
+      },
+    });
+
+    // Assign Adin as KOOR_DIVISION for PR on this board
+    const adinUser = userMap['adin.pr@bncc.net'];
+    const prDivId = divisionMap['PR'];
+    if (adinUser && prDivId) {
+      await prisma.boardMember.upsert({
+        where: {
+          board_id_user_id: {
+            board_id: demoBoard.id,
+            user_id: adinUser.id,
+          },
+        },
+        update: { role: BoardRole.KOOR_DIVISION, division_id: prDivId },
+        create: {
+          board_id: demoBoard.id,
+          user_id: adinUser.id,
+          role: BoardRole.KOOR_DIVISION,
+          division_id: prDivId,
+        },
+      });
+    }
+
+    // Assign Felicia IDT as STAFF for PR on this board
+    const feliciaIdt = userMap['feliciaIDT.pr@bncc.net'];
+    if (feliciaIdt && prDivId) {
+      await prisma.boardMember.upsert({
+        where: {
+          board_id_user_id: {
+            board_id: demoBoard.id,
+            user_id: feliciaIdt.id,
+          },
+        },
+        update: { role: BoardRole.STAFF, division_id: prDivId },
+        create: {
+          board_id: demoBoard.id,
+          user_id: feliciaIdt.id,
+          role: BoardRole.STAFF,
+          division_id: prDivId,
+        },
+      });
+    }
+  }
 
   console.log('Seed and data backfill completed successfully!');
 }
