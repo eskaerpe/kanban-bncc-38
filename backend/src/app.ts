@@ -12,6 +12,9 @@ import lookupRoutes from './routes/lookup.routes';
 
 const app = express();
 
+// Trust reverse proxy (Vercel serverless / edge routing)
+app.set('trust proxy', 1);
+
 app.use(helmet());
 
 const corsOrigin = process.env.CORS_ORIGIN
@@ -29,12 +32,14 @@ const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   message: { message: 'Too many requests from this IP, please try again after 15 minutes' },
+  validate: { xForwardedForHeader: false, default: false },
 });
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 15,
   message: { message: 'Too many authentication attempts, please try again after 15 minutes' },
+  validate: { xForwardedForHeader: false, default: false },
 });
 
 app.use('/api/auth/login', authLimiter);
@@ -47,5 +52,13 @@ app.use('/api/boards', boardRoutes);
 app.use('/api/cards', cardRoutes);
 app.use('/api', attachmentRoutes);
 app.use('/api', lookupRoutes);
+
+// Global Error Handler
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error('[API Server Error]:', err);
+  res.status(err.status || 500).json({
+    message: err.message || 'Internal server error',
+  });
+});
 
 export default app;
