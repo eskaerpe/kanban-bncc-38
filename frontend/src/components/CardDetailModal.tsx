@@ -100,8 +100,10 @@ export function CardDetailModal({
   const isBoardAdmin = myMemberInfo?.role === 'BOARD_ADMIN';
   const isKoorOfCardDivision =
     myMemberInfo?.role === 'KOOR_DIVISION' && myMemberInfo?.division_id === card.division_id;
-  const isGlobalAdmin = user?.global_role === 'GLOBAL_ADMIN';
-  const isAuthorizedQC = isBoardAdmin || isKoorOfCardDivision || isGlobalAdmin;
+  const isGlobalAdmin = user?.global_role === 'GLOBAL_ADMIN' || !!user?.is_super_admin;
+  const isAssignee = card.assignees?.some((a) => a.user_id === user?.id);
+  // Strict anti-self-approval: Assignee cannot review their own card, even if admin/koor
+  const isAuthorizedQC = (isBoardAdmin || isKoorOfCardDivision || isGlobalAdmin) && !isAssignee;
 
   // Title Save handler
   const handleSaveTitle = async () => {

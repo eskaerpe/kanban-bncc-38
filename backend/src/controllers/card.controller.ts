@@ -212,7 +212,7 @@ export const updateCard = async (req: Request, res: Response): Promise<void> => 
 
       if (isQcDecision(card.status, targetStatus)) {
         const isSelfAssigned = card.assignees.some((a) => a.user_id === userId);
-        if (isSelfAssigned && !req.user?.is_super_admin) {
+        if (isSelfAssigned) {
           res.status(403).json({ message: 'Self-approval dilarang: Pelaksana tugas tidak boleh menyetujui atau merevisi QC atas kartunya sendiri' });
           return;
         }
@@ -367,7 +367,7 @@ export const moveCard = async (req: Request, res: Response): Promise<void> => {
     // Check QC Gatekeeper rules when moving card from ON_QC to DONE or REVISION
     if (isQcDecision(card.status, targetStatus)) {
       const isSelfAssigned = card.assignees.some((a) => a.user_id === userId);
-      if (isSelfAssigned && !req.user?.is_super_admin) {
+      if (isSelfAssigned) {
         res.status(403).json({ message: 'Self-approval dilarang: Pelaksana tugas tidak boleh menyetujui atau merevisi QC atas kartunya sendiri' });
         return;
       }

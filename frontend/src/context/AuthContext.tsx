@@ -6,6 +6,11 @@ export interface User {
   email: string;
   name: string;
   global_role: 'GLOBAL_ADMIN' | 'USER';
+  roles?: string[];
+  divisions?: string[];
+  is_super_admin?: boolean;
+  token_version?: number;
+  is_active?: boolean;
   created_at?: string;
 }
 

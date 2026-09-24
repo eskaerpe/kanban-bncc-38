@@ -34,6 +34,14 @@ export const assignRoles = async (req: Request, res: Response): Promise<void> =>
     if (roles.length) {
       await tx.userRole.createMany({ data: roles.map((role) => ({ user_id: userId, role_id: role.id, assigned_by: actorId })) });
     }
+    await tx.roleAuditLog.create({
+      data: {
+        actor_id: actorId,
+        target_user_id: userId,
+        action: 'ROLE_ASSIGN',
+        detail: `Assigned roles: ${roleCodes.join(', ')}`,
+      },
+    });
     return tx.user.update({ where: { id: userId }, data: { token_version: { increment: 1 } }, select: { id: true, token_version: true } });
   });
   res.json({ message: 'Roles assigned successfully', user: result, role_codes: roleCodes });
@@ -59,6 +67,14 @@ export const assignDivisions = async (req: Request, res: Response): Promise<void
     if (divisions.length) {
       await tx.userDivision.createMany({ data: divisions.map((division) => ({ user_id: userId, division_id: division.id, assigned_by: actorId })) });
     }
+    await tx.roleAuditLog.create({
+      data: {
+        actor_id: actorId,
+        target_user_id: userId,
+        action: 'DIVISION_ASSIGN',
+        detail: `Assigned divisions: ${divisionCodes.join(', ')}`,
+      },
+    });
     return tx.user.update({ where: { id: userId }, data: { token_version: { increment: 1 } }, select: { id: true, token_version: true } });
   });
   res.json({ message: 'Divisions assigned successfully', user: result, division_codes: divisionCodes });

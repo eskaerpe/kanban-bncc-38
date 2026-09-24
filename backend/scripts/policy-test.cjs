@@ -49,8 +49,12 @@ const reviewerKoorUser = { id: 10, roles: ['KOOR_DIVISION', 'STAFF'], global_rol
 // Assignee cannot approve their own card even if they are KOOR on that board
 assert.equal(auth.canApproveQc(reviewerKoorMember, reviewerKoorUser, selfAssignedCard, 10), false);
 
-// Super Admin / COO / CFO bypass anti-self-approval
+// Strict maker != checker: Even Super Admin / COO / CFO cannot approve their own card if they are assigned to it!
 const execReviewerUser = { id: 10, roles: ['COO', 'STAFF'], is_super_admin: true };
-assert.equal(auth.canApproveQc(reviewerKoorMember, execReviewerUser, selfAssignedCard, 10), true);
+assert.equal(auth.canApproveQc(reviewerKoorMember, execReviewerUser, selfAssignedCard, 10), false);
+
+// But another executive (not assigned to this card) can approve it!
+const anotherExecReviewer = { id: 11, roles: ['COO', 'STAFF'], is_super_admin: true };
+assert.equal(auth.canApproveQc(null, anotherExecReviewer, selfAssignedCard, 11), true);
 
 console.log('All policy tests passed successfully!');

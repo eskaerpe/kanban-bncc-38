@@ -62,11 +62,11 @@ export const canApproveQc = (
 
   // Anti Self-Approval Gate:
   // An assignee cannot review/approve/reject their own card!
+  // Strict maker != checker: Even executives cannot approve tasks they personally executed.
   if (
     actualUserId &&
     card.assignees &&
-    card.assignees.some((a) => a.user_id === actualUserId) &&
-    !superAdmin
+    card.assignees.some((a) => a.user_id === actualUserId)
   ) {
     return false;
   }

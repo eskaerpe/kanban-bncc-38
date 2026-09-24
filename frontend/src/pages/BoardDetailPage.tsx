@@ -410,7 +410,7 @@ export default function BoardDetailPage() {
   };
 
   const isBoardAdmin = myMemberInfo?.role === 'BOARD_ADMIN';
-  const isGlobalAdmin = user?.global_role === 'GLOBAL_ADMIN';
+  const isGlobalAdmin = user?.global_role === 'GLOBAL_ADMIN' || !!user?.is_super_admin;
   const canManageMembers = isBoardAdmin || isGlobalAdmin;
 
   const existingUserIds = new Set(board?.board_members?.map((m) => m.user_id) || []);

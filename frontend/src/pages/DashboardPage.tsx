@@ -129,7 +129,11 @@ export default function DashboardPage() {
                 </span>
                 <span className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
                   <Shield className="h-3 w-3 text-bncc-blue" />
-                  {user?.global_role === 'GLOBAL_ADMIN' ? 'Global Admin' : 'Pengurus / Member'}
+                  {user?.roles && user.roles.length > 0
+                    ? user.roles.join(', ')
+                    : user?.global_role === 'GLOBAL_ADMIN'
+                    ? 'Global Admin'
+                    : 'Pengurus / Member'}
                 </span>
               </div>
             </div>
