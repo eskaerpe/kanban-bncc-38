@@ -177,31 +177,34 @@ Create one glossary for:
 
 Turn the intended business workflow into explicit, testable backend rules.
 
-## 4.1 Create authorization matrix
+## 4.1 Adopt canonical authorization matrix
 
-Create:
+Canonical matrix specification is formalized in:
 
 ```text
-docs/authorization-matrix.md
+docs/AUTHORIZATION_MATRIX.md
+docs/AUTHORIZATION_GLOSSARY.md
 ```
 
-Document permissions for every role and action:
+All permissions are resolved with Zero-TBD as defined in the approved specification:
 
-| Action | Global Admin | C-Level | Manager | DPI | Koor | Staff |
-|---|---:|---:|---:|---:|---:|---:|
-| View all boards | TBD | TBD | TBD | TBD | TBD | TBD |
-| Create board | TBD | TBD | TBD | TBD | TBD | TBD |
-| Archive board | TBD | TBD | TBD | TBD | TBD | TBD |
-| Manage members | TBD | TBD | TBD | TBD | TBD | TBD |
-| Create card | TBD | TBD | TBD | TBD | TBD | TBD |
-| Edit card | TBD | TBD | TBD | TBD | TBD | TBD |
-| Move card | TBD | TBD | TBD | TBD | TBD | TBD |
-| Submit for QC | TBD | TBD | TBD | TBD | TBD | TBD |
-| Approve QC | TBD | TBD | TBD | TBD | TBD | TBD |
-| Reject QC | TBD | TBD | TBD | TBD | TBD | TBD |
-| Delete card | TBD | TBD | TBD | TBD | TBD | TBD |
+| Action | Super Admin | Board Admin | Koor Division (In-Scope) | Staff (Assigned) | Staff (Unassigned) |
+|---|---|---|---|---|---|
+| View public boards | Yes | Yes | Yes | Yes | Yes |
+| View private boards | Yes | Yes (if member) | Yes (if member) | Yes (if member) | No |
+| Create board | Yes | Yes | No | No | No |
+| Archive/Delete board | Yes | Yes | No | No | No |
+| Manage board members | Yes | Yes | No | No | No |
+| Create card | Yes | Yes | Yes | Yes | No |
+| Edit card details | Yes | Yes | Yes | Yes | No |
+| Move TO_DO -> ON_PROGRESS | Yes | Yes | Yes | Yes | No |
+| Submit ON_QC | Yes | Yes | Yes | Yes | No |
+| Approve QC (-> DONE) | Yes | Yes | Yes (Non-assignee) | No | No |
+| Reject QC (-> REVISION) | Yes | Yes | Yes (Non-assignee) | No | No |
+| Delete card | Yes | Yes | No | No | No |
+| Manage global roles/divisions | Yes | No | No | No | No |
 
-Replace every `TBD` with an approved decision before implementation is considered complete.
+Refer to `docs/AUTHORIZATION_MATRIX.md` for full edge cases and anti-self-approval enforcement.
 
 ## 4.2 Create authorization policy modules
 
