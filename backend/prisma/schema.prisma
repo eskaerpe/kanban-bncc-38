@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
@@ -44,8 +44,17 @@ model User {
   password_hash String
   name          String
   global_role   GlobalRole     @default(USER)
+  token_version Int            @default(1) @map("token_version")
+  is_active     Boolean        @default(true) @map("is_active")
   created_at    DateTime       @default(now())
 
+  // New multi-role and multi-division relations
+  user_roles      UserRole[]
+  user_divisions  UserDivision[]
+  audit_logs_acted  RoleAuditLog[] @relation("AuditActor")
+  audit_logs_target RoleAuditLog[] @relation("AuditTarget")
+
+  // Existing relations
   boards_created  Board[]          @relation("BoardCreator")
   board_members   BoardMember[]
   card_assignees  CardAssignee[]
@@ -55,14 +64,79 @@ model User {
   @@map("users")
 }
 
-model Division {
-  id   Int    @id @default(autoincrement())
-  name String @unique
+model Role {
+  id          Int        @id @default(autoincrement())
+  code        String     @unique // "SUPER_ADMIN", "BOARD_ADMIN", "KOOR_DIVISION", "STAFF"
+  name        String
+  description String?    @db.Text
+  is_system   Boolean    @default(false) @map("is_system")
+  created_at  DateTime   @default(now()) @map("created_at")
+  updated_at  DateTime   @updatedAt @map("updated_at")
 
-  board_members BoardMember[]
-  cards         Card[]
+  user_roles  UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  user_id     Int      @map("user_id")
+  role_id     Int      @map("role_id")
+  assigned_at DateTime @default(now()) @map("assigned_at")
+  assigned_by Int?     @map("assigned_by")
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [role_id], references: [id], onDelete: Cascade)
+
+  @@id([user_id, role_id])
+  @@index([user_id])
+  @@index([role_id])
+  @@map("user_roles")
+}
+
+model Division {
+  id          Int            @id @default(autoincrement())
+  code        String?        @unique // "PR", "EEO", "HRD", "RND", "LNT"
+  name        String         @unique
+  description String?        @db.Text
+  created_at  DateTime       @default(now()) @map("created_at")
+  updated_at  DateTime       @default(now()) @updatedAt @map("updated_at")
+
+  user_divisions UserDivision[]
+  board_members  BoardMember[]
+  cards          Card[]
 
   @@map("divisions")
+}
+
+model UserDivision {
+  user_id     Int      @map("user_id")
+  division_id Int      @map("division_id")
+  assigned_at DateTime @default(now()) @map("assigned_at")
+  assigned_by Int?     @map("assigned_by")
+
+  user     User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  division Division @relation(fields: [division_id], references: [id], onDelete: Cascade)
+
+  @@id([user_id, division_id])
+  @@index([user_id])
+  @@index([division_id])
+  @@map("user_divisions")
+}
+
+model RoleAuditLog {
+  id             Int      @id @default(autoincrement())
+  actor_id       Int      @map("actor_id")
+  target_user_id Int      @map("target_user_id")
+  action         String   // "ROLE_ASSIGN", "ROLE_REVOKE", "DIVISION_ASSIGN", "DIVISION_REMOVE"
+  detail         String?  @db.Text
+  created_at     DateTime @default(now()) @map("created_at")
+
+  actor       User @relation("AuditActor", fields: [actor_id], references: [id], onDelete: Cascade)
+  target_user User @relation("AuditTarget", fields: [target_user_id], references: [id], onDelete: Cascade)
+
+  @@index([target_user_id])
+  @@index([actor_id])
+  @@map("role_audit_logs")
 }
 
 model Board {
